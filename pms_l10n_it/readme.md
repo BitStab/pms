@@ -514,11 +514,11 @@ This module is licensed under AGPL-3. See LICENSE file for details.
 
 Authors
 ~~~~~~~
-* Your Company
+* IT-Stecher
 
 Contributors
 ~~~~~~~~~~~~
-* Your Name <your.email@example.com>
+* Bitstab
 * Additional contributors welcome
 
 Maintainers
