@@ -1,4 +1,4 @@
-# Copyright 2024 Your Company
+# Copyright 2025 IT-Stecher
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from . import pms_guest_registration_wizard

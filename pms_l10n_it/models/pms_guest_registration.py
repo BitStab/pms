@@ -1,4 +1,4 @@
-# Copyright 2024 Your Company
+# Copyright 2025 IT-Stecher
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import fields, models, api, _
@@ -95,6 +95,8 @@ class PmsGuestRegistration(models.Model):
         """Send guest registration to Alloggiati Web"""
         self.ensure_one()
         
+        self._create_guest_groups()
+
         if not self.checkin_partner_ids:
             raise UserError(_("Please select at least one guest to register."))
             
@@ -147,6 +149,78 @@ class PmsGuestRegistration(models.Model):
             self.error_message = str(e)
             _logger.error("Guest registration failed: %s", str(e))
             raise UserError(_('Registration failed: %s') % str(e))
+
+    def _create_guest_groups(self):
+        """Erstellt Gäste-Gruppen basierend auf Reservierungen"""
+        reservations = self.checkin_partner_ids.mapped('reservation_id')
+        
+        for reservation in reservations:
+            guests = reservation.checkin_partner_ids.filtered(
+                lambda g: g.id in self.checkin_partner_ids.ids
+            )
+            
+            if len(guests) <= 1:
+                continue
+                
+            # Bestehende Gruppe suchen oder erstellen
+            existing_group = self.env['pms.guest.group'].search([
+                ('reservation_id', '=', reservation.id)
+            ], limit=1)
+            
+            if not existing_group:
+                # Hauptgast bestimmen (normalerweise der Buchende)
+                main_guest = self._determine_main_guest(guests, reservation)
+                
+                # Gruppe erstellen
+                group = self.env['pms.guest.group'].create({
+                    'reservation_id': reservation.id,
+                    'group_type': self._determine_group_type(guests),
+                    'main_guest_id': main_guest.id,
+                })
+                
+                # Hauptgast markieren
+                main_guest.write({
+                    'guest_group_id': group.id,
+                    'is_main_guest': True
+                })
+                
+                # Abhängige Gäste zuweisen
+                dependent_guests = guests - main_guest
+                dependent_guests.write({
+                    'guest_group_id': group.id,
+                    'is_main_guest': False
+                })
+    def _determine_main_guest(self, guests, reservation):
+        """Bestimmt den Hauptgast einer Gruppe"""
+        # 1. Priority: Booking partner
+        if reservation.partner_id:
+            main_guest = guests.filtered(
+                lambda g: g.partner_id == reservation.partner_id
+            )
+            if main_guest:
+                return main_guest[0]
+        
+        # 2. Priotity: Oldest guest (birthdate)
+        if guests.filtered('birthdate_date'):
+            return min(guests.filtered('birthdate_date'), 
+                    key=lambda g: g.birthdate_date)
+        
+        # 3. Priority: First alphabetically by lastname
+        return min(guests, key=lambda g: g.lastname or '')
+
+    def _determine_group_type(self, guests):
+        """Bestimmt ob Familie oder Reisegruppe"""
+        if len(guests) <= 1:
+            return 'individual'
+        
+        # To optimize in some way...
+        # Family: Same last name or relation
+        lastnames = set(guest.lastname for guest in guests if guest.lastname)
+        if len(lastnames) == 1:
+            return 'family'
+        
+        # Group: Multiple guests with different last names
+        return 'group'
 
     def _test_schedine(self, schedine_list):
         """Test schedine records format without sending to Alloggiati Web"""
@@ -279,7 +353,7 @@ class PmsGuestRegistration(models.Model):
             record = [' '] * 168
             
             # Tipo Alloggiato (0-1) - Default to "16" for hotel guests
-            tipo_alloggiato = "16"
+            tipo_alloggiato = guest.tipo_alloggiato_code or "16"
             record[0:2] = list(tipo_alloggiato.ljust(2)[:2])
             
             # Data Arrivo (2-11) - gg/mm/aaaa format

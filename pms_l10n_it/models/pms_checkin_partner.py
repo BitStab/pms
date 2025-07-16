@@ -1,4 +1,4 @@
-# Copyright 2024 Your Company
+# Copyright 2025 IT-Stecher
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import fields, models, api, _
@@ -48,6 +48,50 @@ class PmsCheckinPartner(models.Model):
     )
 
     residence_city_id = fields.Many2one("res.city", string="City of Residence")
+
+    guest_group_id = fields.Many2one(
+        "pms.guest.group",
+        string="Guest Group"
+    )
+    
+    is_main_guest = fields.Boolean(
+        string="Main Guest (Capo)",
+        default=False
+    )
+    
+    tipo_alloggiato_code = fields.Selection([
+        ('16', 'Hotel Guest (Standard)'),
+        ('17', 'Capo Famiglia'),
+        ('18', 'Familiare'),
+        ('19', 'Capo Gruppo'),
+        ('20', 'Membro Gruppo')
+    ], string="Guest Type", compute="_compute_tipo_alloggiato")
+
+    @api.depends('guest_group_id', 'is_main_guest')
+    def _compute_tipo_alloggiato(self):
+        """Automatische Bestimmung des Tipo Alloggiato"""
+        for guest in self:
+            if not guest.guest_group_id:
+                guest.tipo_alloggiato_code = '16'  # Standard
+                continue
+                
+            group_type = guest.guest_group_id.group_type
+            
+            if guest.is_main_guest:
+                if group_type == 'family':
+                    guest.tipo_alloggiato_code = '17'  # Capo Famiglia
+                elif group_type == 'group':
+                    guest.tipo_alloggiato_code = '19'  # Capo Gruppo
+                else:
+                    guest.tipo_alloggiato_code = '16'  # Standard
+            else:
+                if group_type == 'family':
+                    guest.tipo_alloggiato_code = '18'  # Familiare
+                elif group_type == 'group':
+                    guest.tipo_alloggiato_code = '20'  # Membro Gruppo
+                else:
+                    guest.tipo_alloggiato_code = '16'  # Standard
+    
 
     @api.model
     def _get_document_type_selection(self):
