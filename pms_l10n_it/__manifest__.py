@@ -2,14 +2,14 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 {
-    "name": "PMS Italian Guest Registration (Alloggiati Web) - Enhanced",
+    "name": "PMS Italian Guest Registration (Alloggiati Web)",
     "summary": """
         Complete Italian guest registration integration for PMS with Alloggiati Web service,
         including remote check-in, automatic receipt download, and comprehensive monitoring
     """,
     "version": "16.0.2.0.0",
     "license": "AGPL-3",
-    "author": "Your Company, Odoo Community Association (OCA)",
+    "author": "IT-Stecher",
     "website": "https://github.com/OCA/pms",
     "category": "Hospitality/Hotels",
     "depends": [
@@ -56,7 +56,7 @@
     },
     "post_init_hook": "post_init_hook",
     "development_status": "Beta",
-    "maintainers": ["your_maintainer_handle"],
+    "maintainers": ["Bitstab", "IT-Stecher"],
     "images": [
         "static/description/banner.png",
         "static/description/dashboard.png",
