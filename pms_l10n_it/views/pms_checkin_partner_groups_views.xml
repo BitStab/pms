@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Extend Tree View für Gruppen-Felder -->
+        <record id="pms_checkin_partner_view_tree_groups" model="ir.ui.view">
+            <field name="name">pms.checkin.partner.tree.groups</field>
+            <field name="model">pms.checkin.partner</field>
+            <field name="inherit_id" ref="pms_l10n_it.pms_checkin_partner_view_tree_italian"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='it_exemption_reason']" position="after">
+                    <field name="guest_group_id" optional="hide"/>
+                    <field name="tipo_alloggiato_code" string="Guest Type"/>
+                    <field name="is_main_guest" string="Main Guest"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Extend Form View für Gruppen-Tab -->
+        <record id="pms_checkin_partner_view_form_groups" model="ir.ui.view">
+            <field name="name">pms.checkin.partner.form.groups</field>
+            <field name="model">pms.checkin.partner</field>
+            <field name="inherit_id" ref="pms_l10n_it.pms_checkin_partner_view_form_italian"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='italian_registration']" position="after">
+                    <page string="Guest Group" name="guest_group">
+                        <group>
+                            <group name="group_info">
+                                <field name="guest_group_id"/>
+                                <field name="is_main_guest"/>
+                                <field name="tipo_alloggiato_code"/>
+                                <field name="tipo_alloggiato_description"/>
+                            </group>
+                            <group name="group_actions">
+                                <button name="action_create_group" 
+                                        string="Create Group" 
+                                        type="object" 
+                                        class="btn-primary"
+                                        attrs="{'invisible': [('guest_group_id', '!=', False)]}"/>
+                                <button name="action_leave_group" 
+                                        string="Leave Group" 
+                                        type="object" 
+                                        class="btn-secondary"
+                                        attrs="{'invisible': [('guest_group_id', '=', False)]}"/>
+                            </group>
+                        </group>
+                        
+                        <div class="alert alert-info" role="alert"
+                             attrs="{'invisible': [('guest_group_id', '!=', False)]}">
+                            <strong>No Group:</strong> This guest is not part of any group.
+                            Individual guests get tipo_alloggiato code "16".
+                        </div>
+                        
+                        <div class="alert alert-success" role="alert"
+                             attrs="{'invisible': [('guest_group_id', '=', False)]}">
+                            <strong>Group Member:</strong> This guest is part of a <field name="guest_group_id" readonly="1"/> group.
+                        </div>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import fields, models, api, _
+from odoo.exceptions import UserError
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -34,9 +35,69 @@ class PmsGuestGroup(models.Model):
         string="Dependent Guests"
     )
     
-    def _determine_group_type(self):
+    property_id = fields.Many2one(
+        "pms.property",
+        string="Property",
+        related="reservation_id.pms_property_id",
+        store=True
+    )
+    
+    display_name = fields.Char(
+        string="Name",
+        compute="_compute_display_name",
+        store=True
+    )
+    
+    guest_count = fields.Integer(
+        string="Guest Count",
+        compute="_compute_guest_count",
+        store=True
+    )
+    
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('registered', 'Registered')
+    ], string="State", default='draft')
+
+    @api.depends('main_guest_id', 'group_type', 'guest_count')
+    def _compute_display_name(self):
+        for group in self:
+            if group.main_guest_id:
+                group.display_name = f"{group.main_guest_id.display_name} ({group.group_type} - {group.guest_count} guests)"
+            else:
+                group.display_name = f"Guest Group ({group.group_type})"
+
+    @api.depends('main_guest_id', 'dependent_guest_ids')
+    def _compute_guest_count(self):
+        for group in self:
+            count = 1 if group.main_guest_id else 0  # Main guest
+            count += len(group.dependent_guest_ids)   # Dependent guests
+            group.guest_count = count
+
+    def action_auto_detect_group(self):
+        """Automatische Erkennung des Gruppentyps"""
+        self.ensure_one()
+        
+        all_guests = self.dependent_guest_ids + self.main_guest_id
+        detected_type = self._determine_group_type(all_guests)
+        
+        self.write({'group_type': detected_type})
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Group Type Detected'),
+                'message': _('Group type set to: %s') % dict(self._fields['group_type'].selection)[detected_type],
+                'type': 'success',
+            }
+        }
+    
+    def _determine_group_type(self, guests):
         """Automatische Erkennung Familie vs. Gruppe"""
-        guests = self.reservation_id.checkin_partner_ids
+        if not guests:
+            guests = self.reservation_id.checkin_partner_ids
         
         # Familie: Gleicher Nachname oder Verwandtschaft
         if self._is_family(guests):
@@ -56,3 +117,31 @@ class PmsGuestGroup(models.Model):
         # Gleicher Nachname = Familie
         lastnames = set(guest.lastname for guest in guests if guest.lastname)
         return len(lastnames) == 1 and len(guests) > 1
+
+    def action_confirm_group(self):
+        """Bestätige die Gruppenstruktur"""
+        self.ensure_one()
+        
+        if not self.main_guest_id:
+            raise UserError(_("Please select a main guest"))
+        
+        if self.guest_count < 2 and self.group_type != 'individual':
+            raise UserError(_("Groups must have at least 2 members"))
+        
+        # Stelle sicher, dass der Hauptgast korrekt markiert ist
+        self.main_guest_id.write({'is_main_guest': True})
+        
+        # Stelle sicher, dass abhängige Gäste nicht als Hauptgast markiert sind
+        self.dependent_guest_ids.write({'is_main_guest': False})
+        
+        self.write({'state': 'confirmed'})
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Group Confirmed'),
+                'message': _('Guest group structure has been confirmed'),
+                'type': 'success',
+            }
+        }

@@ -38,6 +38,8 @@
         # Views - Enhanced Features
         "views/pms_guest_registration_dashboard_views.xml",
         "views/remote_checkin_templates.xml",
+        "views/pms_guest_group_views.xml",
+        "views/pms_checkin_partner_groups_views.xml",
         
         # Wizards
         "wizard/pms_guest_registration_wizard_views.xml",
