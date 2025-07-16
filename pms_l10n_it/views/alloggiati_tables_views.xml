@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Alloggiati Table Tree View -->
+        <record id="alloggiati_table_view_tree" model="ir.ui.view">
+            <field name="name">alloggiati.table.tree</field>
+            <field name="model">alloggiati.table</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="table_type"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="parent_code"/>
+                    <field name="property_id"/>
+                    <field name="active"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Alloggiati Table Form View -->
+        <record id="alloggiati_table_view_form" model="ir.ui.view">
+            <field name="name">alloggiati.table.form</field>
+            <field name="model">alloggiati.table</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="table_type"/>
+                                <field name="code"/>
+                                <field name="name"/>
+                            </group>
+                            <group>
+                                <field name="parent_code"/>
+                                <field name="property_id"/>
+                                <field name="active"/>
+                            </group>
+                        </group>
+                        <group string="Description">
+                            <field name="description" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Alloggiati Table Search View -->
+        <record id="alloggiati_table_view_search" model="ir.ui.view">
+            <field name="name">alloggiati.table.search</field>
+            <field name="model">alloggiati.table</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="table_type"/>
+                    <field name="property_id"/>
+                    
+                    <filter string="Places" name="luoghi" domain="[('table_type', '=', 'luoghi')]"/>
+                    <filter string="Document Types" name="tipi_documento" domain="[('table_type', '=', 'tipi_documento')]"/>
+                    <filter string="Guest Types" name="tipi_alloggiato" domain="[('table_type', '=', 'tipi_alloggiato')]"/>
+                    <filter string="Apartments" name="appartamenti" domain="[('table_type', '=', 'lista_appartamenti')]"/>
+                    
+                    <separator/>
+                    <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Table Type" name="group_table_type" context="{'group_by': 'table_type'}"/>
+                        <filter string="Property" name="group_property" context="{'group_by': 'property_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Alloggiati Table Action -->
+        <record id="action_alloggiati_table" model="ir.actions.act_window">
+            <field name="name">Alloggiati Reference Tables</field>
+            <field name="res_model">alloggiati.table</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="alloggiati_table_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No reference tables found!
+                </p>
+                <p>
+                    Reference tables are automatically synchronized from Alloggiati Web.
+                    Use the Table Manager to sync the latest data.
+                </p>
+            </field>
+        </record>
+
+        <!-- Table Manager Tree View -->
+        <record id="alloggiati_table_manager_view_tree" model="ir.ui.view">
+            <field name="name">alloggiati.table.manager.tree</field>
+            <field name="model">alloggiati.table.manager</field>
+            <field name="arch" type="xml">
+                <tree decoration-success="sync_status == 'success'" decoration-danger="sync_status == 'error'">
+                    <field name="property_id"/>
+                    <field name="sync_status" widget="badge"/>
+                    <field name="last_sync_date"/>
+                    <button name="action_sync_all_tables" 
+                            string="Sync Now" 
+                            type="object" 
+                            class="btn-primary"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Table Manager Form View -->
+        <record id="alloggiati_table_manager_view_form" model="ir.ui.view">
+            <field name="name">alloggiati.table.manager.form</field>
+            <field name="model">alloggiati.table.manager</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button name="action_sync_all_tables" 
+                                string="Sync All Tables" 
+                                type="object" 
+                                class="btn-primary"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="property_id"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="sync_status"/>
+                                <field name="last_sync_date"/>
+                            </group>
+                        </group>
+                        
+                        <separator string="Available Tables"/>
+                        <field name="property_id" invisible="1"/>
+                        <field name="table_ids" nolabel="1" readonly="1">
+                            <tree>
+                                <field name="table_type"/>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="active"/>
+                            </tree>
+                        </field>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Table Manager Action -->
+        <record id="action_alloggiati_table_manager" model="ir.actions.act_window">
+            <field name="name">Table Synchronization</field>
+            <field name="res_model">alloggiati.table.manager</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Set up table synchronization!
+                </p>
+                <p>
+                    Create table managers for your properties to sync reference data
+                    from Alloggiati Web (places, document types, etc.).
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_alloggiati_config" 
+                  name="Alloggiati Configuration" 
+                  parent="menu_italian_registration_main" 
+                  sequence="100"/>
+                  
+        <menuitem id="menu_alloggiati_table_manager"
+                  name="Table Synchronization"
+                  parent="menu_alloggiati_config"
+                  action="action_alloggiati_table_manager"
+                  sequence="10"/>
+                  
+        <menuitem id="menu_alloggiati_table"
+                  name="Reference Tables"
+                  parent="menu_alloggiati_config"
+                  action="action_alloggiati_table"
+                  sequence="20"/>
+
+    </data>
+</odoo>

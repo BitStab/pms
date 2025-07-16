@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Demo Property with Italian Guest Registration -->
+        <record id="demo_property_italian" model="pms.property">
+            <field name="name">Hotel Demo Italia</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="it_guest_registration_enabled" eval="True"/>
+            <field name="alloggiati_web_username">DEMO_USER</field>
+            <field name="alloggiati_web_password">demo_password</field>
+            <field name="alloggiati_web_wskey">demo_wskey_12345</field>
+            <field name="alloggiati_web_codice_struttura">12345678</field>
+            <field name="alloggiati_web_codice_categoria">1</field>
+            <field name="alloggiati_web_test_mode" eval="True"/>
+            <field name="remote_checkin_enabled" eval="True"/>
+            <field name="remote_checkin_hours_before">48</field>
+            <field name="remote_checkin_reminder_hours">24</field>
+            <field name="auto_download_receipts" eval="True"/>
+            <field name="auto_register_checkin" eval="True"/>
+            <field name="auto_register_time">23.0</field>
+            <field name="auto_select_guests" eval="True"/>
+            <field name="auto_select_criteria">non_exempt</field>
+            <field name="exempt_minors_under_age">14</field>
+            <field name="registration_notification_emails">manager@demo-hotel.it,reception@demo-hotel.it</field>
+            <field name="send_success_notifications" eval="True"/>
+            <field name="send_error_notifications" eval="True"/>
+            <field name="validate_guest_data" eval="True"/>
+            <field name="allow_partial_registrations" eval="True"/>
+            <field name="max_registration_retries">3</field>
+        </record>
+
+        <!-- Demo Countries with Alloggiati Web Codes -->
+        <record id="demo_country_italy" model="res.country">
+            <field name="name">Italy (Demo)</field>
+            <field name="code">IT</field>
+            <field name="alloggiati_web_code">100000001</field>
+            <field name="alloggiati_web_active" eval="True"/>
+        </record>
+
+        <record id="demo_country_germany" model="res.country">
+            <field name="name">Germany (Demo)</field>
+            <field name="code">DE</field>
+            <field name="alloggiati_web_code">100000002</field>
+            <field name="alloggiati_web_active" eval="True"/>
+        </record>
+
+        <record id="demo_country_france" model="res.country">
+            <field name="name">France (Demo)</field>
+            <field name="code">FR</field>
+            <field name="alloggiati_web_code">100000003</field>
+            <field name="alloggiati_web_active" eval="True"/>
+        </record>
+
+        <!-- Demo Italian States/Provinces -->
+        <record id="demo_state_trentino" model="res.country.state">
+            <field name="name">Trentino-Alto Adige</field>
+            <field name="code">TN</field>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="alloggiati_web_code">422000000</field>
+            <field name="alloggiati_web_active" eval="True"/>
+        </record>
+
+        <record id="demo_state_veneto" model="res.country.state">
+            <field name="name">Veneto</field>
+            <field name="code">VE</field>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="alloggiati_web_code">427000000</field>
+            <field name="alloggiati_web_active" eval="True"/>
+        </record>
+
+        <!-- Demo Italian Cities -->
+        <record id="demo_city_trento" model="res.city">
+            <field name="name">Trento</field>
+            <field name="state_id" ref="demo_state_trentino"/>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="alloggiati_web_code">422070221</field>
+            <field name="alloggiati_web_active" eval="True"/>
+            <field name="istat_code">022205</field>
+            <field name="cadastral_code">L378</field>
+        </record>
+
+        <record id="demo_city_bolzano" model="res.city">
+            <field name="name">Bolzano</field>
+            <field name="state_id" ref="demo_state_trentino"/>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="alloggiati_web_code">421008</field>
+            <field name="alloggiati_web_active" eval="True"/>
+            <field name="istat_code">021008</field>
+            <field name="cadastral_code">A952</field>
+        </record>
+
+        <record id="demo_city_venice" model="res.city">
+            <field name="name">Venezia</field>
+            <field name="state_id" ref="demo_state_veneto"/>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="alloggiati_web_code">427042</field>
+            <field name="alloggiati_web_active" eval="True"/>
+            <field name="istat_code">027042</field>
+            <field name="cadastral_code">L736</field>
+        </record>
+
+        <!-- Demo Alloggiati Tables -->
+        <record id="demo_alloggiati_table_luoghi_italy" model="alloggiati.table">
+            <field name="name">ITALIA</field>
+            <field name="code">100000001</field>
+            <field name="table_type">luoghi</field>
+            <field name="description">Repubblica Italiana</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="demo_alloggiati_table_luoghi_trento" model="alloggiati.table">
+            <field name="name">TRENTO</field>
+            <field name="code">422070221</field>
+            <field name="table_type">luoghi</field>
+            <field name="description">Comune di Trento, Provincia di Trento</field>
+            <field name="parent_code">TN</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="demo_alloggiati_table_doc_passport" model="alloggiati.table">
+            <field name="name">PASSAPORTO</field>
+            <field name="code">1</field>
+            <field name="table_type">tipi_documento</field>
+            <field name="description">Passaporto</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="demo_alloggiati_table_doc_id_card" model="alloggiati.table">
+            <field name="name">CARTA DI IDENTITA</field>
+            <field name="code">2</field>
+            <field name="table_type">tipi_documento</field>
+            <field name="description">Carta di Identità</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="demo_alloggiati_table_guest_hotel" model="alloggiati.table">
+            <field name="name">OSPITI DI ALBERGO</field>
+            <field name="code">16</field>
+            <field name="table_type">tipi_alloggiato</field>
+            <field name="description">Ospiti di Albergo</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Demo Table Manager -->
+        <record id="demo_table_manager" model="alloggiati.table.manager">
+            <field name="property_id" ref="demo_property_italian"/>
+            <field name="sync_status">success</field>
+            <field name="last_sync_date" eval="(DateTime.now() - timedelta(days=5))"/>
+        </record>
+
+        <!-- Demo Partners/Guests -->
+        <record id="demo_partner_italian_guest" model="res.partner">
+            <field name="name">Mario Rossi</field>
+            <field name="email">mario.rossi@email.it</field>
+            <field name="phone">+39 0461 123456</field>
+            <field name="country_id" ref="demo_country_italy"/>
+            <field name="state_id" ref="demo_state_trentino"/>
+            <field name="city_id" ref="demo_city_trento"/>
+            <field name="is_company" eval="False"/>
+        </record>
+
+        <record id="demo_partner_german_guest" model="res.partner">
+            <field name="name">Hans Mueller</field>
+            <field name="email">hans.mueller@email.de</field>
+            <field name="phone">+49 89 123456</field>
+            <field name="country_id" ref="demo_country_germany"/>
+            <field name="is_company" eval="False"/>
+        </record>
+
+        <!-- Demo Reservation -->
+        <record id="demo_reservation_1" model="pms.reservation">
+            <field name="name">RES/2024/001</field>
+            <field name="partner_id" ref="demo_partner_italian_guest"/>
+            <field name="pms_property_id" ref="demo_property_italian"/>
+            <field name="checkin" eval="(DateTime.now() + timedelta(days=2)).replace(hour=15, minute=0)"/>
+            <field name="checkout" eval="(DateTime.now() + timedelta(days=5)).replace(hour=11, minute=0)"/>
+            <field name="adults">2</field>
+            <field name="children">0</field>
+            <field name="state">confirm</field>
+        </record>
+
+        <!-- Demo Check-in Partners -->
+        <record id="demo_checkin_partner_mario" model="pms.checkin.partner">
+            <field name="reservation_id" ref="demo_reservation_1"/>
+            <field name="firstname">Mario</field>
+            <field name="lastname">Rossi</field>
+            <field name="email">mario.rossi@email.it</field>
+            <field name="phone">+39 0461 123456</field>
+            <field name="birthdate_date">1985-05-15</field>
+            <field name="gender">male</field>
+            <field name="nationality_id" ref="demo_country_italy"/>
+            <field name="residence_country_id" ref="demo_country_italy"/>
+            <field name="residence_state_id" ref="demo_state_trentino"/>
+            <field name="residence_city_id" ref="demo_city_trento"/>
+            <field name="document_type">id_card</field>
+            <field name="document_number">IT123456789</field>
+            <field name="document_expedition_date">2020-01-15</field>
+            <field name="arrival" eval="(DateTime.now() + timedelta(days=2)).date()"/>
+            <field name="departure" eval="(DateTime.now() + timedelta(days=5)).date()"/>
+            <field name="state">draft</field>
+            <field name="it_registered" eval="False"/>
+        </record>
+
+        <record id="demo_checkin_partner_giulia" model="pms.checkin.partner">
+            <field name="reservation_id" ref="demo_reservation_1"/>
+            <field name="firstname">Giulia</field>
+            <field name="lastname">Rossi</field>
+            <field name="email">giulia.rossi@email.it</field>
+            <field name="birthdate_date">1988-08-22</field>
+            <field name="gender">female</field>
+            <field name="nationality_id" ref="demo_country_italy"/>
+            <field name="residence_country_id" ref="demo_country_italy"/>
+            <field name="residence_state_id" ref="demo_state_trentino"/>
+            <field name="residence_city_id" ref="demo_city_trento"/>
+            <field name="document_type">id_card</field>
+            <field name="document_number">IT987654321</field>
+            <field name="document_expedition_date">2019-03-10</field>
+            <field name="arrival" eval="(DateTime.now() + timedelta(days=2)).date()"/>
+            <field name="departure" eval="(DateTime.now() + timedelta(days=5)).date()"/>
+            <field name="state">draft</field>
+            <field name="it_registered" eval="False"/>
+        </record>
+
+        <!-- Demo Guest Registration -->
+        <record id="demo_guest_registration_1" model="pms.guest.registration">
+            <field name="property_id" ref="demo_property_italian"/>
+            <field name="registration_date" eval="DateTime.now().date()"/>
+            <field name="checkin_partner_ids" eval="[(6, 0, [ref('demo_checkin_partner_mario'), ref('demo_checkin_partner_giulia')])]"/>
+            <field name="state">draft</field>
+        </record>
+
+        <!-- Demo Remote Check-in Token -->
+        <record id="demo_remote_checkin_token_1" model="pms.remote.checkin.token">
+            <field name="name">demo-checkin-token-001</field>
+            <field name="reservation_id" ref="demo_reservation_1"/>
+            <field name="guest_email">mario.rossi@email.it</field>
+            <field name="expires_at" eval="(DateTime.now() + timedelta(days=7))"/>
+            <field name="state">sent</field>
+        </record>
+
+        <!-- Demo Remote Check-in Data -->
+        <record id="demo_remote_checkin_data_mario" model="pms.remote.checkin.data">
+            <field name="token_id" ref="demo_remote_checkin_token_1"/>
+            <field name="firstname">Mario</field>
+            <field name="lastname">Rossi</field>
+            <field name="birthdate_date">1985-05-15</field>
+            <field name="gender">M</field>
+            <field name="nationality_id" ref="demo_country_italy"/>
+            <field name="residence_country_id" ref="demo_country_italy"/>
+            <field name="residence_state_id" ref="demo_state_trentino"/>
+            <field name="residence_city_id" ref="demo_city_trento"/>
+            <field name="document_type">id_card</field>
+            <field name="document_number">IT123456789</field>
+            <field name="document_expedition_date">2020-01-15</field>
+            <field name="email">mario.rossi@email.it</field>
+            <field name="phone">+39 0461 123456</field>
+            <field name="privacy_consent" eval="True"/>
+        </record>
+
+        <!-- Demo Registration Alert -->
+        <record id="demo_registration_alert_1" model="pms.guest.registration.alert">
+            <field name="property_id" ref="demo_property_italian"/>
+            <field name="alert_type">pending_high</field>
+            <field name="severity">warning</field>
+            <field name="message">12 guests are pending registration</field>
+            <field name="guest_count">12</field>
+            <field name="resolved" eval="False"/>
+        </record>
+
+        <!-- Demo Receipt -->
+        <record id="demo_receipt_1" model="pms.guest.registration.receipt">
+            <field name="property_id" ref="demo_property_italian"/>
+            <field name="receipt_date" eval="(DateTime.now() - timedelta(days=1)).date()"/>
+            <field name="registration_id" ref="demo_guest_registration_1"/>
+            <field name="state">downloaded</field>
+            <field name="guest_count">2</field>
+            <field name="pdf_filename">ricevuta_demo_20240101.pdf</field>
+        </record>
+
+    </data>
+</odoo>

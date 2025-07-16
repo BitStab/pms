@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Cron Job for Auto Guest Registration -->
+        <record id="ir_cron_auto_guest_registration" model="ir.cron">
+            <field name="name">PMS IT: Auto Guest Registration</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_auto_guest_registration()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+        </record>
+        
+        <!-- Cron Job for Registration Alerts -->
+        <record id="ir_cron_registration_alerts" model="ir.cron">
+            <field name="name">PMS IT: Check Registration Alerts</field>
+            <field name="model_id" ref="model_pms_guest_registration_alert"/>
+            <field name="state">code</field>
+            <field name="code">model.check_and_create_alerts()</field>
+            <field name="interval_number">4</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+        </record>
+        
+        <!-- Email Template for Registration Notification -->
+        <record id="email_template_registration_notification" model="mail.template">
+            <field name="name">Italian Guest Registration Notification</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="subject">Alloggiati Web Registration Report - ${object.name}</field>
+            <field name="email_from">${object.company_id.email or user.email}</field>
+            <field name="email_to">${object.registration_notification_emails}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px;">
+                    <h2>Automatic Guest Registration Report</h2>
+                    <p>Property: <strong>${object.name}</strong></p>
+                    <p>Date: <strong>${datetime.date.today()}</strong></p>
+                    
+                    <h3>Registration Summary</h3>
+                    <ul>
+                        <li>Guests Registered: <strong>${ctx.get('registered_count', 0)}</strong></li>
+                        <li>Guests Exempted: <strong>${ctx.get('exempted_count', 0)}</strong></li>
+                        <li>Registration ID: <strong>#${ctx.get('registration_id', '')}</strong></li>
+                    </ul>
+                    
+                    <p>This is an automated notification from the Alloggiati Web registration system.</p>
+                    
+                    <hr/>
+                    <p style="font-size: 12px; color: #666;">
+                        You can view the registration details in the system or download the receipt from Alloggiati Web.
+                    </p>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+        
+        <!-- Email Template for Failed Registration Alert -->
+        <record id="email_template_registration_failed" model="mail.template">
+            <field name="name">Italian Guest Registration Failed</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="subject">ALERT: Guest Registration Failed - ${object.property_id.name}</field>
+            <field name="email_from">${object.company_id.email or user.email}</field>
+            <field name="email_to">${object.property_id.registration_notification_emails}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px;">
+                    <h2 style="color: #d9534f;">Guest Registration Failed</h2>
+                    <p>Property: <strong>${object.property_id.name}</strong></p>
+                    <p>Date: <strong>${object.registration_date}</strong></p>
+                    <p>Number of Guests: <strong>${object.guest_count}</strong></p>
+                    
+                    <h3>Error Details</h3>
+                    <div style="background-color: #f8f8f8; padding: 10px; border-left: 3px solid #d9534f;">
+                        <pre>${object.error_message}</pre>
+                    </div>
+                    
+                    <p style="margin-top: 20px;">
+                        <strong>Action Required:</strong> Please check the registration and retry manually.
+                    </p>
+                    
+                    <hr/>
+                    <p style="font-size: 12px; color: #666;">
+                        This is an automated alert. Please do not reply to this email.
+                    </p>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+        
+    </data>
+</odoo>

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Extend PMS Checkin Partner Form View -->
+        <record id="pms_checkin_partner_view_form_italian" model="ir.ui.view">
+            <field name="name">pms.checkin.partner.form.italian</field>
+            <field name="model">pms.checkin.partner</field>
+            <field name="inherit_id" ref="pms.pms_checkin_partner_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//notebook" position="inside">
+                    <page string="Italian Registration" name="italian_registration">
+                        <group>
+                            <group name="registration_status">
+                                <field name="it_registered" readonly="1"/>
+                                <field name="it_registration_date" readonly="1"/>
+                                <field name="it_exemption_reason"/>
+                                <field name="it_exemption_notes" attrs="{'invisible': [('it_exemption_reason', '=', False)]}"/>
+                            </group>
+                            <group name="document_info">
+                                <field name="document_type"/>
+                                <field name="document_number"/>
+                                <field name="document_expedition_date"/>
+                            </group>
+                        </group>
+                        
+                        <separator string="Actions"/>
+                        <group>
+                            <div class="oe_button_box">
+                                <button name="action_register_guest" 
+                                        string="Register with Police" 
+                                        type="object" 
+                                        class="btn-primary"
+                                        attrs="{'invisible': [('it_registered', '=', True)]}"/>
+                                <button name="action_mark_as_registered" 
+                                        string="Mark as Registered" 
+                                        type="object"
+                                        attrs="{'invisible': [('it_registered', '=', True)]}"/>
+                                <button name="action_unmark_as_registered" 
+                                        string="Unmark Registration" 
+                                        type="object"
+                                        attrs="{'invisible': [('it_registered', '=', False)]}"/>
+                            </div>
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Extend PMS Checkin Partner Tree View -->
+        <record id="pms_checkin_partner_view_tree_italian" model="ir.ui.view">
+            <field name="name">pms.checkin.partner.tree.italian</field>
+            <field name="model">pms.checkin.partner</field>
+            <field name="inherit_id" ref="pms.pms_checkin_partner_view_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="decoration-success">it_registered == True</attribute>
+                    <attribute name="decoration-info">it_registered == False</attribute>
+                </xpath>
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="it_registered" string="IT Registered"/>
+                    <field name="document_type"/>
+                    <field name="document_number"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add Italian Registration Filter to Search View -->
+        <record id="pms_checkin_partner_view_search_italian" model="ir.ui.view">
+            <field name="name">pms.checkin.partner.search.italian</field>
+            <field name="model">pms.checkin.partner</field>
+            <field name="inherit_id" ref="pms.pms_checkin_partner_view_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="inside">
+                    <separator/>
+                    <filter string="Registered with Police" name="it_registered" domain="[('it_registered', '=', True)]"/>
+                    <filter string="Not Registered" name="it_not_registered" domain="[('it_registered', '=', False)]"/>
+                    <filter string="Need Registration" name="need_registration" 
+                            domain="[('it_registered', '=', False), ('state', '=', 'onboard'), ('it_exemption_reason', '=', False)]"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Action for Unregistered Guests -->
+        <record id="action_pms_checkin_partner_unregistered" model="ir.actions.act_window">
+            <field name="name">Unregistered Guests</field>
+            <field name="res_model">pms.checkin.partner</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('it_registered', '=', False), ('state', '=', 'onboard')]</field>
+            <field name="context">{'search_default_need_registration': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No unregistered guests found!
+                </p>
+                <p>
+                    This view shows guests who are currently staying but haven't been registered 
+                    with the Italian Police (Alloggiati Web) yet.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item for Unregistered Guests -->
+        <menuitem id="menu_pms_checkin_partner_unregistered"
+                  name="Unregistered Guests"
+                  parent="menu_italian_registration_main"
+                  action="action_pms_checkin_partner_unregistered"
+                  sequence="45"/>
+
+    </data>
+</odoo>

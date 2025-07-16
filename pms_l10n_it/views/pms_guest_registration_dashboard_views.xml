@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Registration Dashboard Tree View -->
+        <record id="pms_guest_registration_dashboard_view_tree" model="ir.ui.view">
+            <field name="name">pms.guest.registration.dashboard.tree</field>
+            <field name="model">pms.guest.registration.dashboard</field>
+            <field name="arch" type="xml">
+                <tree create="false" edit="false" delete="false" 
+                      decoration-success="registration_rate >= 95" 
+                      decoration-warning="registration_rate >= 80 and registration_rate &lt; 95"
+                      decoration-danger="registration_rate &lt; 80">
+                    <field name="property_id"/>
+                    <field name="date"/>
+                    <field name="total_guests"/>
+                    <field name="registered_guests"/>
+                    <field name="pending_guests"/>
+                    <field name="exempted_guests"/>
+                    <field name="failed_registrations"/>
+                    <field name="registration_rate" widget="percentage"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Registration Dashboard Graph View -->
+        <record id="pms_guest_registration_dashboard_view_graph" model="ir.ui.view">
+            <field name="name">pms.guest.registration.dashboard.graph</field>
+            <field name="model">pms.guest.registration.dashboard</field>
+            <field name="arch" type="xml">
+                <graph string="Registration Statistics" type="line" stacked="False">
+                    <field name="date" type="row"/>
+                    <field name="registered_guests" type="measure"/>
+                    <field name="pending_guests" type="measure"/>
+                    <field name="failed_registrations" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- Registration Dashboard Pivot View -->
+        <record id="pms_guest_registration_dashboard_view_pivot" model="ir.ui.view">
+            <field name="name">pms.guest.registration.dashboard.pivot</field>
+            <field name="model">pms.guest.registration.dashboard</field>
+            <field name="arch" type="xml">
+                <pivot string="Registration Analysis">
+                    <field name="property_id" type="row"/>
+                    <field name="date" type="col" interval="month"/>
+                    <field name="total_guests" type="measure"/>
+                    <field name="registered_guests" type="measure"/>
+                    <field name="registration_rate" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <!-- Registration Dashboard Search View -->
+        <record id="pms_guest_registration_dashboard_view_search" model="ir.ui.view">
+            <field name="name">pms.guest.registration.dashboard.search</field>
+            <field name="model">pms.guest.registration.dashboard</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="property_id"/>
+                    <field name="date"/>
+                    
+                    <filter string="Today" name="today" 
+                            domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Week" name="this_week" 
+                            domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Month" name="this_month" 
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    
+                    <separator/>
+                    <filter string="Has Pending" name="has_pending" 
+                            domain="[('pending_guests', '>', 0)]"/>
+                    <filter string="Has Failed" name="has_failed" 
+                            domain="[('failed_registrations', '>', 0)]"/>
+                    <filter string="Low Registration Rate" name="low_rate" 
+                            domain="[('registration_rate', '&lt;', 80)]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Property" name="group_property" context="{'group_by': 'property_id'}"/>
+                        <filter string="Date" name="group_date" context="{'group_by': 'date:day'}"/>
+                        <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Registration Dashboard Action -->
+        <record id="action_pms_guest_registration_dashboard" model="ir.actions.act_window">
+            <field name="name">Registration Dashboard</field>
+            <field name="res_model">pms.guest.registration.dashboard</field>
+            <field name="view_mode">graph,pivot,tree</field>
+            <field name="search_view_id" ref="pms_guest_registration_dashboard_view_search"/>
+            <field name="context">{'search_default_this_month': 1, 'search_default_group_property': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No registration data found!
+                </p>
+                <p>
+                    Registration dashboard will show statistics once you start registering guests
+                    with the Italian authorities through the Alloggiati Web system.
+                </p>
+            </field>
+        </record>
+
+        <!-- Registration Receipt Views -->
+        <record id="pms_guest_registration_receipt_view_tree" model="ir.ui.view">
+            <field name="name">pms.guest.registration.receipt.tree</field>
+            <field name="model">pms.guest.registration.receipt</field>
+            <field name="arch" type="xml">
+                <tree decoration-success="state == 'downloaded'" 
+                      decoration-danger="state == 'error'"
+                      decoration-muted="state == 'processed'">
+                    <field name="name"/>
+                    <field name="property_id"/>
+                    <field name="receipt_date"/>
+                    <field name="guest_count"/>
+                    <field name="state" widget="badge" 
+                           decoration-success="state == 'downloaded'"
+                           decoration-danger="state == 'error'"/>
+                    <field name="download_date"/>
+                    <button name="action_view_pdf" string="View PDF" type="object" 
+                            icon="fa-file-pdf-o" invisible="not pdf_content"/>
+                    <button name="action_download_receipt" string="Download" type="object" 
+                            icon="fa-download" invisible="state != 'error'"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="pms_guest_registration_receipt_view_form" model="ir.ui.view">
+            <field name="name">pms.guest.registration.receipt.form</field>
+            <field name="model">pms.guest.registration.receipt</field>
+            <field name="arch" type="xml">
+                <form create="false" edit="false">
+                    <header>
+                        <button name="action_view_pdf" string="View PDF" type="object" 
+                                class="btn-primary" invisible="not pdf_content"/>
+                        <button name="action_download_receipt" string="Retry Download" type="object" 
+                                class="btn-secondary" invisible="state != 'error'"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="property_id"/>
+                                <field name="receipt_date"/>
+                                <field name="guest_count"/>
+                            </group>
+                            <group>
+                                <field name="download_date"/>
+                                <field name="pdf_filename" invisible="not pdf_filename"/>
+                                <field name="registration_id" invisible="not registration_id"/>
+                            </group>
+                        </group>
+                        
+                        <group string="Error Details" invisible="state != 'error'">
+                            <field name="error_message" readonly="1" widget="text"/>
+                        </group>
+                        
+                        <div class="oe_chatter">
+                            <field name="message_follower_ids"/>
+                            <field name="activity_ids"/>
+                            <field name="message_ids"/>
+                        </div>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="pms_guest_registration_receipt_view_search" model="ir.ui.view">
+            <field name="name">pms.guest.registration.receipt.search</field>
+            <field name="model">pms.guest.registration.receipt</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="property_id"/>
+                    <field name="receipt_date"/>
+                    
+                    <filter string="Downloaded" name="downloaded" domain="[('state', '=', 'downloaded')]"/>
+                    <filter string="Processed" name="processed" domain="[('state', '=', 'processed')]"/>
+                    <filter string="Error" name="error" domain="[('state', '=', 'error')]"/>
+                    
+                    <separator/>
+                    <filter string="Today" name="today" 
+                            domain="[('receipt_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Week" name="this_week" 
+                            domain="[('receipt_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Month" name="this_month" 
+                            domain="[('receipt_date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Property" name="group_property" context="{'group_by': 'property_id'}"/>
+                        <filter string="Status" name="group_status" context="{'group_by': 'state'}"/>
+                        <filter string="Receipt Date" name="group_date" context="{'group_by': 'receipt_date:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_pms_guest_registration_receipt" model="ir.actions.act_window">
+            <field name="name">Registration Receipts</field>
+            <field name="res_model">pms.guest.registration.receipt</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="pms_guest_registration_receipt_view_search"/>
+            <field name="context">{'search_default_this_month': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No receipts found!
+                </p>
+                <p>
+                    Receipts are automatically downloaded from Alloggiati Web after successful
+                    guest registrations. They serve as proof of compliance with Italian law.
+                </p>
+            </field>
+        </record>
+
+        <!-- Remote Check-in Token Views -->
+        <record id="pms_remote_checkin_token_view_tree" model="ir.ui.view">
+            <field name="name">pms.remote.checkin.token.tree</field>
+            <field name="model">pms.remote.checkin.token</field>
+            <field name="arch" type="xml">
+                <tree decoration-success="state == 'completed'" 
+                      decoration-info="state == 'accessed'"
+                      decoration-warning="state == 'sent'"
+                      decoration-muted="state == 'expired'">
+                    <field name="name"/>
+                    <field name="reservation_id"/>
+                    <field name="property_id"/>
+                    <field name="guest_email"/>
+                    <field name="state" widget="badge" 
+                           decoration-success="state == 'completed'"
+                           decoration-info="state == 'accessed'"
+                           decoration-warning="state == 'sent'"
+                           decoration-muted="state == 'expired'"/>
+                    <field name="expires_at"/>
+                    <field name="access_count"/>
+                    <field name="completed_date"/>
+                    <button name="action_send_reminder" string="Send Reminder" type="object" 
+                            icon="fa-envelope" invisible="state != 'sent'"/>
+                    <button name="action_resend_email" string="Resend Link" type="object" 
+                            icon="fa-refresh" invisible="state not in ('sent', 'accessed')"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="pms_remote_checkin_token_view_form" model="ir.ui.view">
+            <field name="name">pms.remote.checkin.token.form</field>
+            <field name="model">pms.remote.checkin.token</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button name="action_send_reminder" string="Send Reminder" type="object" 
+                                class="btn-secondary" invisible="state != 'sent'"/>
+                        <button name="action_resend_email" string="Resend Link" type="object" 
+                                class="btn-secondary" invisible="state not in ('sent', 'accessed')"/>
+                        <button name="action_expire_token" string="Expire Token" type="object" 
+                                class="btn-danger" invisible="state in ('completed', 'expired')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="sent,accessed,completed"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                Remote Check-in Token
+                            </h1>
+                            <h2>
+                                <field name="reservation_id" readonly="1"/>
+                            </h2>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="property_id"/>
+                                <field name="guest_email"/>
+                                <field name="expires_at"/>
+                            </group>
+                            <group>
+                                <field name="access_count"/>
+                                <field name="last_access"/>
+                                <field name="completed_date" invisible="state != 'completed'"/>
+                            </group>
+                        </group>
+                        
+                        <group string="Check-in URL" invisible="state == 'expired'">
+                            <div class="alert alert-info">
+                                <strong>Check-in URL:</strong><br/>
+                                <code><field name="name" widget="url" text="get_checkin_url()"/></code>
+                            </div>
+                        </group>
+                        
+                        <notebook>
+                            <page string="Guest Data" name="guest_data">
+                                <field name="checkin_data_ids">
+                                    <tree editable="bottom">
+                                        <field name="firstname"/>
+                                        <field name="lastname"/>
+                                        <field name="birthdate_date"/>
+                                        <field name="gender"/>
+                                        <field name="nationality_id"/>
+                                        <field name="document_type"/>
+                                        <field name="document_number"/>
+                                        <field name="privacy_consent"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="pms_remote_checkin_token_view_search" model="ir.ui.view">
+            <field name="name">pms.remote.checkin.token.search</field>
+            <field name="model">pms.remote.checkin.token</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="reservation_id"/>
+                    <field name="property_id"/>
+                    <field name="guest_email"/>
+                    
+                    <filter string="Active" name="active" 
+                            domain="[('state', 'in', ('sent', 'accessed')), ('expires_at', '>', context_today())]"/>
+                    <filter string="Sent" name="sent" domain="[('state', '=', 'sent')]"/>
+                    <filter string="Accessed" name="accessed" domain="[('state', '=', 'accessed')]"/>
+                    <filter string="Completed" name="completed" domain="[('state', '=', 'completed')]"/>
+                    <filter string="Expired" name="expired" domain="[('state', '=', 'expired')]"/>
+                    
+                    <separator/>
+                    <filter string="Expires Today" name="expires_today" 
+                            domain="[('expires_at', '&gt;=', context_today()), ('expires_at', '&lt;', (context_today() + datetime.timedelta(days=1)))]"/>
+                    <filter string="Expires Soon" name="expires_soon" 
+                            domain="[('expires_at', '&gt;=', context_today()), ('expires_at', '&lt;', (context_today() + datetime.timedelta(days=3)))]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Property" name="group_property" context="{'group_by': 'property_id'}"/>
+                        <filter string="Status" name="group_status" context="{'group_by': 'state'}"/>
+                        <filter string="Expiry Date" name="group_expiry" context="{'group_by': 'expires_at:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_pms_remote_checkin_token" model="ir.actions.act_window">
+            <field name="name">Remote Check-in Tokens</field>
+            <field name="res_model">pms.remote.checkin.token</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="pms_remote_checkin_token_view_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No remote check-in tokens found!
+                </p>
+                <p>
+                    Remote check-in tokens are generated automatically for upcoming reservations
+                    when remote check-in is enabled for a property.
+                </p>
+            </field>
+        </record>
+
+        <!-- Registration Alert Views -->
+        <record id="pms_guest_registration_alert_view_tree" model="ir.ui.view">
+            <field name="name">pms.guest.registration.alert.tree</field>
+            <field name="model">pms.guest.registration.alert</field>
+            <field name="arch" type="xml">
+                <tree decoration-danger="severity == 'error'" 
+                      decoration-warning="severity == 'warning'"
+                      decoration-info="severity == 'info'"
+                      decoration-muted="resolved == True">
+                    <field name="property_id"/>
+                    <field name="alert_type"/>
+                    <field name="severity" widget="badge" 
+                           decoration-danger="severity == 'error'"
+                           decoration-warning="severity == 'warning'"
+                           decoration-info="severity == 'info'"/>
+                    <field name="message"/>
+                    <field name="guest_count"/>
+                    <field name="create_date"/>
+                    <field name="resolved" widget="boolean_toggle"/>
+                    <button name="action_resolve" string="Resolve" type="object" 
+                            icon="fa-check" invisible="resolved"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="pms_guest_registration_alert_view_form" model="ir.ui.view">
+            <field name="name">pms.guest.registration.alert.form</field>
+            <field name="model">pms.guest.registration.alert</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button name="action_resolve" string="Mark as Resolved" type="object" 
+                                class="btn-primary" invisible="resolved"/>
+                        <field name="resolved" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="alert_type" readonly="1"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="property_id"/>
+                                <field name="severity"/>
+                                <field name="guest_count" invisible="guest_count == 0"/>
+                            </group>
+                            <group>
+                                <field name="create_date"/>
+                                <field name="resolved_date" invisible="not resolved"/>
+                                <field name="resolved_by" invisible="not resolved"/>
+                            </group>
+                        </group>
+                        
+                        <group string="Alert Message">
+                            <field name="message" readonly="1" widget="text"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_pms_guest_registration_alert" model="ir.actions.act_window">
+            <field name="name">Registration Alerts</field>
+            <field name="res_model">pms.guest.registration.alert</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('resolved', '=', False)]</field>
+            <field name="context">{'search_default_unresolved': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No alerts found!
+                </p>
+                <p>
+                    Alerts are automatically generated when registration issues are detected,
+                    such as high numbers of pending registrations or failed submissions.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_italian_registration_main" 
+                  name="Italian Registration" 
+                  parent="pms.pms_management_menu" 
+                  sequence="60"/>
+
+        <menuitem id="menu_registration_dashboard"
+                  name="Dashboard"
+                  parent="menu_italian_registration_main"
+                  action="action_pms_guest_registration_dashboard"
+                  sequence="10"/>
+
+        <menuitem id="menu_registration_receipts"
+                  name="Receipts"
+                  parent="menu_italian_registration_main"
+                  action="action_pms_guest_registration_receipt"
+                  sequence="20"/>
+
+        <menuitem id="menu_remote_checkin"
+                  name="Remote Check-in"
+                  parent="menu_italian_registration_main"
+                  action="action_pms_remote_checkin_token"
+                  sequence="30"/>
+
+        <menuitem id="menu_registration_alerts"
+                  name="Alerts"
+                  parent="menu_italian_registration_main"
+                  action="action_pms_guest_registration_alert"
+                  sequence="40"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Remote Check-in Email Template -->
+        <record id="email_template_remote_checkin" model="mail.template">
+            <field name="name">Remote Check-in Invitation</field>
+            <field name="model_id" ref="model_pms_remote_checkin_token"/>
+            <field name="subject">Complete your check-in online - ${object.reservation_id.name}</field>
+            <field name="email_from">${object.property_id.company_id.email or user.email}</field>
+            <field name="email_to">${object.guest_email}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px; background-color: #f9f9f9; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        
+                        <!-- Header -->
+                        <div style="background-color: #875A7B; color: white; padding: 30px 20px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 28px;">🏨 Complete Your Check-in</h1>
+                            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">${object.property_id.name}</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style="padding: 30px 20px;">
+                            <h2 style="color: #333; margin-top: 0;">Dear Guest,</h2>
+                            
+                            <p style="color: #555; line-height: 1.6;">
+                                Welcome! To make your arrival as smooth as possible, we invite you to complete your check-in online before your arrival.
+                            </p>
+                            
+                            <!-- Reservation Details Box -->
+                            <div style="background-color: #f8f9fa; border-left: 4px solid #875A7B; padding: 15px; margin: 20px 0;">
+                                <h3 style="margin: 0 0 10px 0; color: #333;">📋 Reservation Details</h3>
+                                <p style="margin: 5px 0; color: #555;"><strong>Reservation:</strong> ${object.reservation_id.name}</p>
+                                <p style="margin: 5px 0; color: #555;"><strong>Check-in:</strong> ${object.reservation_id.checkin.strftime('%A, %B %d, %Y at %H:%M')}</p>
+                                <p style="margin: 5px 0; color: #555;"><strong>Check-out:</strong> ${object.reservation_id.checkout.strftime('%A, %B %d, %Y at %H:%M')}</p>
+                                <p style="margin: 5px 0; color: #555;"><strong>Guest Name:</strong> ${object.reservation_id.partner_id.name}</p>
+                            </div>
+                            
+                            <!-- Benefits -->
+                            <div style="margin: 25px 0;">
+                                <h3 style="color: #333;">✨ Benefits of Online Check-in:</h3>
+                                <ul style="color: #555; line-height: 1.6; padding-left: 20px;">
+                                    <li>Save time at arrival - no paperwork needed</li>
+                                    <li>Provide required information at your convenience</li>
+                                    <li>Comply with Italian registration requirements</li>
+                                    <li>Faster room access on arrival day</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Call to Action Button -->
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${object.get_checkin_url()}" 
+                                   style="background-color: #875A7B; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                                    🔗 Start Online Check-in
+                                </a>
+                            </div>
+                            
+                            <!-- Important Information -->
+                            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+                                <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Important Information</h4>
+                                <ul style="margin: 0; color: #856404; padding-left: 20px;">
+                                    <li>This link is valid until <strong>${object.expires_at.strftime('%B %d, %Y at %H:%M')}</strong></li>
+                                    <li>You'll need a valid ID document for all guests</li>
+                                    <li>Information will be transmitted to Italian authorities as required by law</li>
+                                    <li>All guests over 14 years old must be registered</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Contact Information -->
+                            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                                <h4 style="color: #333; margin-bottom: 10px;">📞 Need Help?</h4>
+                                <p style="color: #555; margin: 5px 0;">
+                                    If you have any questions or need assistance, please contact us:
+                                </p>
+                                <p style="color: #555; margin: 5px 0;">
+                                    <strong>Phone:</strong> ${object.property_id.phone or 'Contact property directly'}<br/>
+                                    <strong>Email:</strong> ${object.property_id.email or object.property_id.company_id.email}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+                            <p style="margin: 0;">
+                                This email was sent by ${object.property_id.name}<br/>
+                                You are receiving this because you have an upcoming reservation with us.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+        
+        <!-- Remote Check-in Reminder Email -->
+        <record id="email_template_remote_checkin_reminder" model="mail.template">
+            <field name="name">Remote Check-in Reminder</field>
+            <field name="model_id" ref="model_pms_remote_checkin_token"/>
+            <field name="subject">⏰ Reminder: Complete your check-in - ${object.reservation_id.name}</field>
+            <field name="email_from">${object.property_id.company_id.email or user.email}</field>
+            <field name="email_to">${object.guest_email}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px; background-color: #f9f9f9; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        
+                        <div style="background-color: #f39c12; color: white; padding: 20px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px;">⏰ Check-in Reminder</h1>
+                            <p style="margin: 10px 0 0 0; opacity: 0.9;">Your arrival is approaching!</p>
+                        </div>
+                        
+                        <div style="padding: 30px 20px; text-align: center;">
+                            <h2 style="color: #333;">Don't forget to complete your online check-in!</h2>
+                            
+                            <p style="color: #555; font-size: 16px;">
+                                Your reservation at <strong>${object.property_id.name}</strong> is coming up soon.
+                            </p>
+                            
+                            <div style="background-color: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; margin: 20px 0; text-align: left;">
+                                <p style="margin: 5px 0; color: #2c3e50;"><strong>Check-in:</strong> ${object.reservation_id.checkin.strftime('%A, %B %d, %Y at %H:%M')}</p>
+                                <p style="margin: 5px 0; color: #2c3e50;"><strong>Time remaining:</strong> Complete before your arrival</p>
+                            </div>
+                            
+                            <a href="${object.get_checkin_url()}" 
+                               style="background-color: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px; margin: 20px 0;">
+                                Complete Check-in Now
+                            </a>
+                            
+                            <p style="color: #7f8c8d; font-size: 14px;">
+                                Completing your check-in online will save you time at arrival and ensure all legal requirements are met.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+        
+        <!-- Enhanced Registration Success Notification -->
+        <record id="email_template_registration_success_enhanced" model="mail.template">
+            <field name="name">Registration Success Notification (Enhanced)</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="subject">✅ Guest Registration Successful - ${object.property_id.name}</field>
+            <field name="email_from">${object.property_id.company_id.email or user.email}</field>
+            <field name="email_to">${object.property_id.registration_notification_emails}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px;">
+                    <div style="background-color: #27ae60; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                        <h2 style="margin: 0; display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 10px;">✅</span>
+                            Guest Registration Successful
+                        </h2>
+                    </div>
+                    
+                    <div style="border: 1px solid #ddd; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                        <p><strong>Property:</strong> ${object.property_id.name}</p>
+                        <p><strong>Registration Date:</strong> ${object.registration_date.strftime('%d/%m/%Y')}</p>
+                        <p><strong>Transmission Time:</strong> ${object.transmission_date.strftime('%d/%m/%Y %H:%M:%S')}</p>
+                        
+                        <div style="background-color: #d5f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 10px 0; color: #27ae60;">📊 Registration Summary</h3>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li><strong>Total Guests:</strong> ${object.guest_count}</li>
+                                <li><strong>Status:</strong> Successfully transmitted to Italian Police</li>
+                                <li><strong>Registration ID:</strong> #${object.id}</li>
+                                % if object.alloggiati_web_id:
+                                <li><strong>Alloggiati Web ID:</strong> ${object.alloggiati_web_id}</li>
+                                % endif
+                            </ul>
+                        </div>
+                        
+                        % if object.response_message:
+                        <div style="background-color: #f8f9fa; padding: 15px; border-left: 3px solid #6c757d; margin: 15px 0;">
+                            <h4 style="margin: 0 0 5px 0;">Server Response:</h4>
+                            <p style="margin: 0; font-family: monospace; font-size: 12px;">${object.response_message}</p>
+                        </div>
+                        % endif
+                        
+                        <h4>📋 Registered Guests:</h4>
+                        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Name</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Birth Date</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Nationality</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Document</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                % for guest in object.checkin_partner_ids:
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;">${guest.firstname} ${guest.lastname}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px;">${guest.birthdate_date.strftime('%d/%m/%Y') if guest.birthdate_date else '-'}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px;">${guest.nationality_id.name if guest.nationality_id else '-'}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px;">${guest.document_type or '-'}: ${guest.document_number or '-'}</td>
+                                </tr>
+                                % endfor
+                            </tbody>
+                        </table>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                            <p>This is an automated notification from the Italian Guest Registration system.</p>
+                            <p>Receipt will be automatically downloaded and stored when available from Alloggiati Web.</p>
+                        </div>
+                    </div>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+        
+        <!-- Registration Error Alert -->
+        <record id="email_template_registration_error_enhanced" model="mail.template">
+            <field name="name">Registration Error Alert (Enhanced)</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="subject">🚨 URGENT: Guest Registration Failed - ${object.property_id.name}</field>
+            <field name="email_from">${object.property_id.company_id.email or user.email}</field>
+            <field name="email_to">${object.property_id.registration_notification_emails}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px;">
+                    <div style="background-color: #e74c3c; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                        <h2 style="margin: 0; display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 10px;">🚨</span>
+                            URGENT: Guest Registration Failed
+                        </h2>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Immediate attention required</p>
+                    </div>
+                    
+                    <div style="border: 1px solid #ddd; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                        <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                            <h3 style="margin: 0 0 10px 0;">⚠️ Action Required</h3>
+                            <p style="margin: 0;">A guest registration has failed and needs immediate attention. Please review and retry manually.</p>
+                        </div>
+                        
+                        <p><strong>Property:</strong> ${object.property_id.name}</p>
+                        <p><strong>Registration Date:</strong> ${object.registration_date.strftime('%d/%m/%Y')}</p>
+                        <p><strong>Failed Time:</strong> ${object.transmission_date.strftime('%d/%m/%Y %H:%M:%S') if object.transmission_date else 'Not transmitted'}</p>
+                        <p><strong>Guest Count:</strong> ${object.guest_count}</p>
+                        
+                        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                            <h4 style="margin: 0 0 10px 0; color: #856404;">Error Details:</h4>
+                            <div style="background-color: white; padding: 10px; border-radius: 3px; font-family: monospace; font-size: 12px; color: #721c24; white-space: pre-wrap;">${object.error_message or 'No error details available'}</div>
+                        </div>
+                        
+                        <h4>👥 Affected Guests:</h4>
+                        <ul>
+                            % for guest in object.checkin_partner_ids:
+                            <li>${guest.firstname} ${guest.lastname} (${guest.nationality_id.name if guest.nationality_id else 'Unknown nationality'})</li>
+                            % endfor
+                        </ul>
+                        
+                        <div style="background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0;">
+                            <h4 style="margin: 0 0 10px 0; color: #004085;">📋 Recommended Actions:</h4>
+                            <ol style="margin: 0; color: #004085;">
+                                <li>Review guest data for completeness and accuracy</li>
+                                <li>Check document numbers and dates</li>
+                                <li>Verify nationality and residence information</li>
+                                <li>Ensure all required fields are filled</li>
+                                <li>Try manual registration after corrections</li>
+                                <li>Contact technical support if error persists</li>
+                            </ol>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${object.get_edit_url() if hasattr(object, 'get_edit_url') else '#'}" 
+                               style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                                View Registration in System
+                            </a>
+                        </div>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                            <p><strong>Legal Notice:</strong> Italian law requires guest registration within specific timeframes. Please ensure this registration is completed as soon as possible to remain compliant.</p>
+                            <p>This is an automated alert. Please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+        
+        <!-- Weekly Registration Summary -->
+        <record id="email_template_weekly_summary" model="mail.template">
+            <field name="name">Weekly Registration Summary</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="subject">📊 Weekly Registration Report - ${object.name}</field>
+            <field name="email_from">${object.company_id.email or user.email}</field>
+            <field name="email_to">${object.registration_notification_emails}</field>
+            <field name="body_html"><![CDATA[
+                <div style="font-family: 'Lucida Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 14px;">
+                    <div style="background-color: #6c5ce7; color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0;">
+                        <h1 style="margin: 0; font-size: 28px;">📊 Weekly Registration Report</h1>
+                        <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">${object.name}</p>
+                        <p style="margin: 5px 0 0 0; opacity: 0.8;">Week of ${(datetime.now() - timedelta(days=7)).strftime('%B %d')} - ${datetime.now().strftime('%B %d, %Y')}</p>
+                    </div>
+                    
+                    <div style="border: 1px solid #ddd; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
+                        
+                        <!-- Quick Stats -->
+                        <div style="display: flex; justify-content: space-around; margin-bottom: 30px; text-align: center;">
+                            <div style="background-color: #00b894; color: white; padding: 20px; border-radius: 8px; min-width: 120px;">
+                                <div style="font-size: 24px; font-weight: bold;">${ctx.get('total_registrations', 0)}</div>
+                                <div style="font-size: 12px; opacity: 0.9;">Total Registrations</div>
+                            </div>
+                            <div style="background-color: #fdcb6e; color: white; padding: 20px; border-radius: 8px; min-width: 120px;">
+                                <div style="font-size: 24px; font-weight: bold;">${ctx.get('total_guests', 0)}</div>
+                                <div style="font-size: 12px; opacity: 0.9;">Guests Registered</div>
+                            </div>
+                            <div style="background-color: #e17055; color: white; padding: 20px; border-radius: 8px; min-width: 120px;">
+                                <div style="font-size: 24px; font-weight: bold;">${ctx.get('failed_registrations', 0)}</div>
+                                <div style="font-size: 12px; opacity: 0.9;">Failed Attempts</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Success Rate -->
+                        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 15px 0; color: #333;">📈 Performance Metrics</h3>
+                            <div style="margin: 10px 0;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Success Rate:</span>
+                                    <strong>${'%.1f' % ctx.get('success_rate', 0)}%</strong>
+                                </div>
+                                <div style="background-color: #e9ecef; height: 8px; border-radius: 4px;">
+                                    <div style="background-color: #28a745; height: 100%; width: ${ctx.get('success_rate', 0)}%; border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 15px 0 5px 0;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Average Response Time:</span>
+                                    <strong>${ctx.get('avg_response_time', 'N/A')}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top Nationalities -->
+                        % if ctx.get('top_nationalities'):
+                        <div style="margin: 25px 0;">
+                            <h3 style="color: #333;">🌍 Top Guest Nationalities</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa;">
+                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Country</th>
+                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">Guests</th>
+                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    % for nat in ctx.get('top_nationalities', []):
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 10px;">${nat.get('country', 'Unknown')}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${nat.get('count', 0)}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${'%.1f' % nat.get('percentage', 0)}%</td>
+                                    </tr>
+                                    % endfor
+                                </tbody>
+                            </table>
+                        </div>
+                        % endif
+                        
+                        <!-- Action Items -->
+                        % if ctx.get('pending_actions'):
+                        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0;">
+                            <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Action Items</h4>
+                            <ul style="margin: 0; color: #856404;">
+                                % for action in ctx.get('pending_actions', []):
+                                <li>${action}</li>
+                                % endfor
+                            </ul>
+                        </div>
+                        % endif
+                        
+                        <!-- Footer -->
+                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; font-size: 12px; color: #666;">
+                            <p>Generated automatically by Italian Guest Registration System</p>
+                            <p>For questions or support, contact your system administrator</p>
+                        </div>
+                    </div>
+                </div>
+            ]]></field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+        
+    </data>
+</odoo>

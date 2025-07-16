@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Guest Registration Record Rules -->
+        <record id="pms_guest_registration_rule_user" model="ir.rule">
+            <field name="name">Guest Registration: User Access</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="pms_guest_registration_rule_manager" model="ir.rule">
+            <field name="name">Guest Registration: Manager Access</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Receipt Record Rules -->
+        <record id="pms_guest_registration_receipt_rule_user" model="ir.rule">
+            <field name="name">Registration Receipt: User Access</field>
+            <field name="model_id" ref="model_pms_guest_registration_receipt"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="pms_guest_registration_receipt_rule_manager" model="ir.rule">
+            <field name="name">Registration Receipt: Manager Access</field>
+            <field name="model_id" ref="model_pms_guest_registration_receipt"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Remote Check-in Token Rules -->
+        <record id="pms_remote_checkin_token_rule_user" model="ir.rule">
+            <field name="name">Remote Check-in Token: User Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_token"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="pms_remote_checkin_token_rule_manager" model="ir.rule">
+            <field name="name">Remote Check-in Token: Manager Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_token"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Public access rule for remote check-in (limited) -->
+        <record id="pms_remote_checkin_token_rule_public" model="ir.rule">
+            <field name="name">Remote Check-in Token: Public Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_token"/>
+            <field name="domain_force">[('state', 'in', ['sent', 'accessed']), ('expires_at', '>', context_today())]</field>
+            <field name="groups" eval="[(4, ref('base.group_public'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Remote Check-in Data Rules -->
+        <record id="pms_remote_checkin_data_rule_user" model="ir.rule">
+            <field name="name">Remote Check-in Data: User Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_data"/>
+            <field name="domain_force">[('token_id.property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="pms_remote_checkin_data_rule_manager" model="ir.rule">
+            <field name="name">Remote Check-in Data: Manager Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_data"/>
+            <field name="domain_force">[('token_id.property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Public access for remote check-in data creation -->
+        <record id="pms_remote_checkin_data_rule_public" model="ir.rule">
+            <field name="name">Remote Check-in Data: Public Access</field>
+            <field name="model_id" ref="model_pms_remote_checkin_data"/>
+            <field name="domain_force">[('token_id.state', 'in', ['sent', 'accessed']), ('token_id.expires_at', '>', context_today())]</field>
+            <field name="groups" eval="[(4, ref('base.group_public'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Dashboard Rules -->
+        <record id="pms_guest_registration_dashboard_rule" model="ir.rule">
+            <field name="name">Registration Dashboard: Company Access</field>
+            <field name="model_id" ref="model_pms_guest_registration_dashboard"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user')), (4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Alert Rules -->
+        <record id="pms_guest_registration_alert_rule_user" model="ir.rule">
+            <field name="name">Registration Alert: User Access</field>
+            <field name="model_id" ref="model_pms_guest_registration_alert"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="pms_guest_registration_alert_rule_manager" model="ir.rule">
+            <field name="name">Registration Alert: Manager Access</field>
+            <field name="model_id" ref="model_pms_guest_registration_alert"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Alloggiati Table Rules -->
+        <record id="alloggiati_table_rule_company" model="ir.rule">
+            <field name="name">Alloggiati Table: Company Access</field>
+            <field name="model_id" ref="model_alloggiati_table"/>
+            <field name="domain_force">['|', ('property_id', '=', False), ('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user')), (4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="alloggiati_table_rule_manager" model="ir.rule">
+            <field name="name">Alloggiati Table: Manager Write Access</field>
+            <field name="model_id" ref="model_alloggiati_table"/>
+            <field name="domain_force">['|', ('property_id', '=', False), ('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Table Manager Rules -->
+        <record id="alloggiati_table_manager_rule" model="ir.rule">
+            <field name="name">Alloggiati Table Manager: Company Access</field>
+            <field name="model_id" ref="model_alloggiati_table_manager"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_user')), (4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="alloggiati_table_manager_rule_manager" model="ir.rule">
+            <field name="name">Alloggiati Table Manager: Manager Access</field>
+            <field name="model_id" ref="model_alloggiati_table_manager"/>
+            <field name="domain_force">[('property_id.company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('pms.group_pms_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

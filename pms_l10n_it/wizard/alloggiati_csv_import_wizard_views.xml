@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- CSV Import Wizard Form -->
+        <record id="alloggiati_csv_import_wizard_view_form" model="ir.ui.view">
+            <field name="name">alloggiati.csv.import.wizard.form</field>
+            <field name="model">alloggiati.csv.import.wizard</field>
+            <field name="arch" type="xml">
+                <form>
+                    <div class="alert alert-info" role="alert" invisible="context.get('show_summary')">
+                        <h4><i class="fa fa-info-circle"></i> CSV Import Wizard</h4>
+                        <p>Upload CSV files from Alloggiati Web to populate reference tables for guest registration.</p>
+                        <ul>
+                            <li><strong>Luoghi:</strong> Places, countries, and municipalities</li>
+                            <li><strong>Tipi Documento:</strong> Document types for identification</li>
+                            <li><strong>Tipi Alloggiato:</strong> Guest types for different accommodation categories</li>
+                            <li><strong>Stati:</strong> Countries and their codes</li>
+                            <li><strong>Comuni:</strong> Italian municipalities with province information</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-success" role="alert" invisible="not context.get('show_summary')">
+                        <h4><i class="fa fa-check-circle"></i> Import Preview Completed</h4>
+                        <p>Review the summary below. If everything looks correct, run the import again without "Dry Run" to apply changes.</p>
+                    </div>
+                    
+                    <sheet>
+                        <group invisible="context.get('show_summary')">
+                            <group name="file_selection">
+                                <field name="table_type"/>
+                                <field name="csv_file" filename="csv_filename"/>
+                                <field name="csv_filename" invisible="1"/>
+                            </group>
+                            <group name="import_options">
+                                <field name="encoding"/>
+                                <field name="delimiter"/>
+                                <field name="has_header"/>
+                                <field name="update_existing"/>
+                                <field name="dry_run"/>
+                            </group>
+                        </group>
+                        
+                        <group string="File Preview" invisible="not preview_data or context.get('show_summary')">
+                            <div class="alert alert-info">
+                                <strong>First few rows from your CSV file:</strong>
+                            </div>
+                            <field name="preview_data" readonly="1" widget="text" nolabel="1"/>
+                        </group>
+                        
+                        <group string="Import Summary" invisible="not import_summary">
+                            <field name="import_summary" readonly="1" widget="text" nolabel="1"/>
+                        </group>
+                        
+                        <div invisible="context.get('show_summary')">
+                            <separator string="Help"/>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>📁 File Format Requirements:</h5>
+                                    <ul>
+                                        <li>CSV file with semicolon (;) or comma (,) separator</li>
+                                        <li>UTF-8 or Latin-1 encoding</li>
+                                        <li>Optional header row</li>
+                                        <li>Minimum 2 columns: Code and Description</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>⚙️ Import Options:</h5>
+                                    <ul>
+                                        <li><strong>Update Existing:</strong> Modify records with same code</li>
+                                        <li><strong>Dry Run:</strong> Preview without making changes</li>
+                                        <li><strong>Encoding:</strong> Character encoding of your file</li>
+                                        <li><strong>Delimiter:</strong> Column separator character</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </sheet>
+                    
+                    <footer>
+                        <button string="Download Sample" name="action_download_sample" type="object" 
+                                class="btn-link" invisible="context.get('show_summary')"/>
+                        <button string="Import CSV" name="action_import_csv" type="object" 
+                                class="btn-primary" invisible="not csv_file or context.get('show_summary')"/>
+                        <button string="Close" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- CSV Import Action -->
+        <record id="action_alloggiati_csv_import_wizard" model="ir.actions.act_window">
+            <field name="name">Import CSV Tables</field>
+            <field name="res_model">alloggiati.csv.import.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Import Reference Tables from CSV
+                </p>
+                <p>
+                    Use this wizard to import reference tables (countries, cities, document types) 
+                    from CSV files downloaded from Alloggiati Web.
+                </p>
+            </field>
+        </record>
+
+        <!-- Add Import Menu Item -->
+        <menuitem id="menu_alloggiati_csv_import"
+                  name="Import CSV Tables"
+                  parent="menu_alloggiati_config"
+                  action="action_alloggiati_csv_import_wizard"
+                  sequence="30"/>
+
+    </data>
+</odoo>

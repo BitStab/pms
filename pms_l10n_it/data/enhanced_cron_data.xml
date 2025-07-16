@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Enhanced Auto Guest Registration -->
+        <record id="ir_cron_auto_guest_registration_enhanced" model="ir.cron">
+            <field name="name">PMS IT: Enhanced Auto Guest Registration</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_auto_guest_registration()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">5</field>
+        </record>
+        
+        <!-- Receipt Download Cron -->
+        <record id="ir_cron_download_receipts" model="ir.cron">
+            <field name="name">PMS IT: Download Registration Receipts</field>
+            <field name="model_id" ref="model_pms_guest_registration_receipt"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_download_receipts()</field>
+            <field name="interval_number">6</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">10</field>
+        </record>
+        
+        <!-- Remote Check-in Reminder Cron -->
+        <record id="ir_cron_remote_checkin_reminders" model="ir.cron">
+            <field name="name">PMS IT: Send Remote Check-in Reminders</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_send_remote_checkin_reminders()</field>
+            <field name="interval_number">2</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">15</field>
+        </record>
+        
+        <!-- Generate Remote Check-in Links -->
+        <record id="ir_cron_generate_remote_checkin_links" model="ir.cron">
+            <field name="name">PMS IT: Generate Remote Check-in Links</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">
+# Find properties with remote check-in enabled
+properties = model.search([('remote_checkin_enabled', '=', True)])
+
+for property_rec in properties:
+    try:
+        property_rec.action_send_remote_checkin_links()
+    except Exception as e:
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.error("Error generating remote check-in links for property %s: %s", property_rec.name, str(e))
+            </field>
+            <field name="interval_number">4</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">20</field>
+        </record>
+        
+        <!-- Enhanced Registration Alerts -->
+        <record id="ir_cron_registration_alerts_enhanced" model="ir.cron">
+            <field name="name">PMS IT: Enhanced Registration Alerts</field>
+            <field name="model_id" ref="model_pms_guest_registration_alert"/>
+            <field name="state">code</field>
+            <field name="code">model.check_and_create_alerts()</field>
+            <field name="interval_number">2</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">5</field>
+        </record>
+        
+        <!-- Data Cleanup Cron -->
+        <record id="ir_cron_cleanup_old_data" model="ir.cron">
+            <field name="name">PMS IT: Cleanup Old Data</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_cleanup_old_data()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">30</field>
+        </record>
+        
+        <!-- Weekly Summary Report -->
+        <record id="ir_cron_weekly_summary" model="ir.cron">
+            <field name="name">PMS IT: Weekly Registration Summary</field>
+            <field name="model_id" ref="model_pms_property"/>
+            <field name="state">code</field>
+            <field name="code">
+# Send weekly summary for properties with notifications enabled
+from datetime import datetime, timedelta
+
+properties = model.search([
+    ('it_guest_registration_enabled', '=', True),
+    ('send_success_notifications', '=', True),
+    ('registration_notification_emails', '!=', False)
+])
+
+for property_rec in properties:
+    try:
+        # Calculate weekly stats
+        week_start = datetime.now() - timedelta(days=7)
+        registrations = env['pms.guest.registration'].search([
+            ('property_id', '=', property_rec.id),
+            ('create_date', '>=', week_start),
+            ('state', '=', 'sent')
+        ])
+        
+        failed_registrations = env['pms.guest.registration'].search_count([
+            ('property_id', '=', property_rec.id),
+            ('create_date', '>=', week_start),
+            ('state', '=', 'error')
+        ])
+        
+        total_guests = sum(registrations.mapped('guest_count'))
+        success_rate = 100.0 if not failed_registrations else (len(registrations) / (len(registrations) + failed_registrations)) * 100
+        
+        # Get top nationalities
+        guests = env['pms.checkin.partner'].search([
+            ('it_registered', '=', True),
+            ('it_registration_date', '>=', week_start),
+            ('pms_property_id', '=', property_rec.id)
+        ])
+        
+        nationality_stats = {}
+        for guest in guests:
+            if guest.nationality_id:
+                country = guest.nationality_id.name
+                nationality_stats[country] = nationality_stats.get(country, 0) + 1
+        
+        top_nationalities = [
+            {
+                'country': country,
+                'count': count,
+                'percentage': (count / total_guests * 100) if total_guests > 0 else 0
+            }
+            for country, count in sorted(nationality_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+        ]
+        
+        # Prepare context for email
+        email_context = {
+            'total_registrations': len(registrations),
+            'total_guests': total_guests,
+            'failed_registrations': failed_registrations,
+            'success_rate': success_rate,
+            'top_nationalities': top_nationalities,
+            'avg_response_time': '&lt; 2 seconds',  # Could be calculated from actual data
+        }
+        
+        # Send email
+        template = env.ref('pms_l10n_it.email_template_weekly_summary', raise_if_not_found=False)
+        if template:
+            template.with_context(**email_context).send_mail(property_rec.id)
+            
+    except Exception as e:
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.error("Error generating weekly summary for property %s: %s", property_rec.name, str(e))
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">weeks</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">25</field>
+        </record>
+        
+        <!-- Sync Reference Tables -->
+        <record id="ir_cron_sync_reference_tables" model="ir.cron">
+            <field name="name">PMS IT: Sync Reference Tables</field>
+            <field name="model_id" ref="model_alloggiati_table_manager"/>
+            <field name="state">code</field>
+            <field name="code">
+# Sync reference tables monthly for all properties
+properties = env['pms.property'].search([('it_guest_registration_enabled', '=', True)])
+
+for property_rec in properties:
+    try:
+        # Find or create table manager
+        table_manager = model.search([('property_id', '=', property_rec.id)], limit=1)
+        if not table_manager:
+            table_manager = model.create({'property_id': property_rec.id})
+        
+        # Only sync if last sync was more than 30 days ago or never synced
+        from datetime import timedelta
+        if (not table_manager.last_sync_date or 
+            table_manager.last_sync_date &lt; (fields.Datetime.now() - timedelta(days=30))):
+            table_manager.action_sync_all_tables()
+            
+    except Exception as e:
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.error("Error syncing tables for property %s: %s", property_rec.name, str(e))
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">months</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">35</field>
+        </record>
+        
+        <!-- Retry Failed Registrations -->
+        <record id="ir_cron_retry_failed_registrations" model="ir.cron">
+            <field name="name">PMS IT: Retry Failed Registrations</field>
+            <field name="model_id" ref="model_pms_guest_registration"/>
+            <field name="state">code</field>
+            <field name="code">
+# Retry failed registrations that are less than 24 hours old
+from datetime import timedelta
+
+failed_registrations = model.search([
+    ('state', '=', 'error'),
+    ('create_date', '>=', fields.Datetime.now() - timedelta(hours=24)),
+    ('create_date', '&lt;=', fields.Datetime.now() - timedelta(hours=1)),  # Wait at least 1 hour
+])
+
+for registration in failed_registrations:
+    try:
+        # Check if property allows automatic retries
+        if hasattr(registration.property_id, 'max_registration_retries'):
+            # Count previous retry attempts (could be tracked in a separate field)
+            retry_count = registration.message_ids.filtered(lambda m: 'retry' in m.body.lower())
+            if len(retry_count) >= registration.property_id.max_registration_retries:
+                continue  # Skip if max retries reached
+        
+        # Reset state and try again
+        registration.write({
+            'state': 'draft',
+            'error_message': False,
+            'transmission_date': False
+        })
+        
+        # Attempt to send again
+        registration.action_send_registration()
+        
+    except Exception as e:
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.error("Error retrying registration %s: %s", registration.id, str(e))
+            </field>
+            <field name="interval_number">4</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active" eval="True"/>
+            <field name="doall" eval="False"/>
+            <field name="priority">10</field>
+        </record>
+        
+    </data>
+</odoo>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Country Form View Extension -->
+        <record id="res_country_view_form_alloggiati" model="ir.ui.view">
+            <field name="name">res.country.form.alloggiati</field>
+            <field name="model">res.country</field>
+            <field name="inherit_id" ref="base.view_country_form"/>
+            <field name="arch" type="xml">
+                <group name="main_info" position="after">
+                    <group string="Alloggiati Web" name="alloggiati_info">
+                        <field name="alloggiati_web_active"/>
+                        <field name="alloggiati_web_code" 
+                               invisible="not alloggiati_web_active"/>
+                    </group>
+                </group>
+            </field>
+        </record>
+
+        <!-- Country Tree View Extension -->
+        <record id="res_country_view_tree_alloggiati" model="ir.ui.view">
+            <field name="name">res.country.tree.alloggiati</field>
+            <field name="model">res.country</field>
+            <field name="inherit_id" ref="base.view_country_tree"/>
+            <field name="arch" type="xml">
+                <field name="code" position="after">
+                    <field name="alloggiati_web_code" optional="hide"/>
+                    <field name="alloggiati_web_active" optional="hide"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- State Form View Extension -->
+        <record id="res_country_state_view_form_alloggiati" model="ir.ui.view">
+            <field name="name">res.country.state.form.alloggiati</field>
+            <field name="model">res.country.state</field>
+            <field name="inherit_id" ref="base.view_country_state_form"/>
+            <field name="arch" type="xml">
+                <group position="after">
+                    <group string="Alloggiati Web" name="alloggiati_info">
+                        <field name="alloggiati_web_active"/>
+                        <field name="alloggiati_web_code" 
+                               invisible="not alloggiati_web_active"/>
+                    </group>
+                </group>
+            </field>
+        </record>
+
+        <!-- State Tree View Extension -->
+        <record id="res_country_state_view_tree_alloggiati" model="ir.ui.view">
+            <field name="name">res.country.state.tree.alloggiati</field>
+            <field name="model">res.country.state</field>
+            <field name="inherit_id" ref="base.view_country_state_tree"/>
+            <field name="arch" type="xml">
+                <field name="code" position="after">
+                    <field name="alloggiati_web_code" optional="hide"/>
+                    <field name="alloggiati_web_active" optional="hide"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- City Form View Extension -->
+        <record id="res_city_view_form_alloggiati" model="ir.ui.view">
+            <field name="name">res.city.form.alloggiati</field>
+            <field name="model">res.city</field>
+            <field name="inherit_id" ref="base_address_extended.address_street_extended_city_form"/>
+            <field name="arch" type="xml">
+                <group position="after">
+                    <group string="Italian Codes" name="italian_codes">
+                        <field name="alloggiati_web_active"/>
+                        <field name="alloggiati_web_code" 
+                               invisible="not alloggiati_web_active"/>
+                        <field name="istat_code"/>
+                        <field name="cadastral_code"/>
+                    </group>
+                </group>
+            </field>
+        </record>
+
+        <!-- City Tree View Extension -->
+        <record id="res_city_view_tree_alloggiati" model="ir.ui.view">
+            <field name="name">res.city.tree.alloggiati</field>
+            <field name="model">res.city</field>
+            <field name="inherit_id" ref="base_address_extended.view_city_tree"/>
+            <field name="arch" type="xml">
+                <field name="zipcode" position="after">
+                    <field name="istat_code" optional="hide"/>
+                    <field name="cadastral_code" optional="hide"/>
+                    <field name="alloggiati_web_code" optional="hide"/>
+                    <field name="alloggiati_web_active" optional="hide"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- Search View for Cities with Italian filters -->
+        <record id="res_city_view_search_alloggiati" model="ir.ui.view">
+            <field name="name">res.city.search.alloggiati</field>
+            <field name="model">res.city</field>
+            <field name="inherit_id" ref="base_address_extended.view_city_filter"/>
+            <field name="arch" type="xml">
+                <search position="inside">
+                    <separator/>
+                    <filter string="Active in Alloggiati Web" name="alloggiati_active" 
+                            domain="[('alloggiati_web_active', '=', True)]"/>
+                    <filter string="Italian Cities" name="italian_cities" 
+                            domain="[('country_id.code', '=', 'IT')]"/>
+                    <filter string="With ISTAT Code" name="with_istat" 
+                            domain="[('istat_code', '!=', False)]"/>
+                </search>
+            </field>
+        </record>
+
+    </data>
+</odoo>

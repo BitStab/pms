@@ -1,0 +1,597 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Remote Check-in Form Template -->
+        <template id="remote_checkin_form" name="Remote Check-in Form">
+            <t t-call="website.layout">
+                <div id="wrap" class="oe_structure oe_empty">
+                    <div class="container mt-4">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-8">
+                                <div class="card shadow">
+                                    <div class="card-header bg-primary text-white">
+                                        <h3 class="mb-0">
+                                            <i class="fa fa-user-plus mr-2"></i>
+                                            Remote Check-in
+                                        </h3>
+                                        <small><t t-esc="property.name"/></small>
+                                    </div>
+                                    
+                                    <div class="card-body">
+                                        <!-- Reservation Info -->
+                                        <div class="alert alert-info">
+                                            <h5><i class="fa fa-info-circle"></i> Your Reservation</h5>
+                                            <p><strong>Reservation:</strong> <t t-esc="reservation.name"/></p>
+                                            <p><strong>Check-in:</strong> <t t-esc="reservation.checkin.strftime('%d/%m/%Y %H:%M')"/></p>
+                                            <p><strong>Check-out:</strong> <t t-esc="reservation.checkout.strftime('%d/%m/%Y %H:%M')"/></p>
+                                        </div>
+                                        
+                                        <!-- Instructions -->
+                                        <div class="alert alert-warning">
+                                            <h6><i class="fa fa-exclamation-triangle"></i> Important Notes</h6>
+                                            <ul>
+                                                <li>Please provide accurate information as required by Italian law</li>
+                                                <li>All guests must provide valid identification documents</li>
+                                                <li>Minors under 14 may be exempt from certain requirements</li>
+                                                <li>This information will be transmitted to Italian Police (Alloggiati Web)</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <!-- Form -->
+                                        <form method="post" t-attf-action="/remote-checkin/#{token_obj.name}/submit" id="remote-checkin-form">
+                                            <div id="guests-container">
+                                                <t t-set="guest_index" t-value="0"/>
+                                                <t t-foreach="existing_data" t-as="guest_data">
+                                                    <t t-call="pms_l10n_it.guest_form_section">
+                                                        <t t-set="guest_index" t-value="guest_index"/>
+                                                        <t t-set="existing_guest" t-value="guest_data"/>
+                                                    </t>
+                                                    <t t-set="guest_index" t-value="guest_index + 1"/>
+                                                </t>
+                                                
+                                                <!-- If no existing data, show one empty form -->
+                                                <t t-if="not existing_data">
+                                                    <t t-call="pms_l10n_it.guest_form_section">
+                                                        <t t-set="guest_index" t-value="0"/>
+                                                        <t t-set="existing_guest" t-value="None"/>
+                                                    </t>
+                                                </t>
+                                            </div>
+                                            
+                                            <!-- Add Guest Button -->
+                                            <div class="text-center mb-3">
+                                                <button type="button" class="btn btn-outline-primary" onclick="addGuest()">
+                                                    <i class="fa fa-plus"></i> Add Another Guest
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- Privacy Consent -->
+                                            <div class="form-check mb-3">
+                                                <input type="checkbox" class="form-check-input" id="global_privacy_consent" required="required"/>
+                                                <label class="form-check-label" for="global_privacy_consent">
+                                                    <strong>I consent to the processing of personal data as required by Italian law for tourist registration purposes.</strong>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Submit Buttons -->
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-success btn-lg mr-2">
+                                                    <i class="fa fa-check"></i> Complete Check-in
+                                                </button>
+                                                <button type="button" class="btn btn-secondary" onclick="saveDraft()">
+                                                    <i class="fa fa-save"></i> Save Draft
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- JavaScript -->
+                <script>
+                    let guestCounter = <t t-esc="len(existing_data) if existing_data else 1"/>;
+                    
+                    function addGuest() {
+                        const container = document.getElementById('guests-container');
+                        const newGuestHtml = generateGuestForm(guestCounter);
+                        container.insertAdjacentHTML('beforeend', newGuestHtml);
+                        setupCountryStateCity(guestCounter);
+                        guestCounter++;
+                    }
+                    
+                    function removeGuest(index) {
+                        const guestSection = document.getElementById('guest-section-' + index);
+                        if (guestSection) {
+                            guestSection.remove();
+                        }
+                    }
+                    
+                    function generateGuestForm(index) {
+                        return `
+                            <div class="card mb-4" id="guest-section-${index}">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Guest ${index + 1}</h5>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGuest(${index})">
+                                        <i class="fa fa-trash"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    ${generateGuestFields(index)}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    function generateGuestFields(index) {
+                        const prefix = `guest_${index}_`;
+                        return `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}firstname">First Name *</label>
+                                        <input type="text" class="form-control" name="${prefix}firstname" id="${prefix}firstname" required/>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}lastname">Last Name *</label>
+                                        <input type="text" class="form-control" name="${prefix}lastname" id="${prefix}lastname" required/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}birthdate_date">Birth Date *</label>
+                                        <input type="date" class="form-control" name="${prefix}birthdate_date" id="${prefix}birthdate_date" required/>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}gender">Gender *</label>
+                                        <select class="form-control" name="${prefix}gender" id="${prefix}gender" required>
+                                            <option value="">Select...</option>
+                                            <option value="M">Male</option>
+                                            <option value="F">Female</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}nationality_id">Nationality *</label>
+                                        <select class="form-control" name="${prefix}nationality_id" id="${prefix}nationality_id" required>
+                                            <option value="">Select...</option>
+                                            <t t-foreach="countries" t-as="country">
+                                                <option t-att-value="country.id"><t t-esc="country.name"/></option>
+                                            </t>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}residence_country_id">Country of Residence *</label>
+                                        <select class="form-control" name="${prefix}residence_country_id" id="${prefix}residence_country_id" required onchange="loadStates(${index})">
+                                            <option value="">Select...</option>
+                                            <t t-foreach="countries" t-as="country">
+                                                <option t-att-value="country.id"><t t-esc="country.name"/></option>
+                                            </t>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}residence_state_id">State/Province</label>
+                                        <select class="form-control" name="${prefix}residence_state_id" id="${prefix}residence_state_id" onchange="loadCities(${index})">
+                                            <option value="">Select...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}residence_city_id">City</label>
+                                        <select class="form-control" name="${prefix}residence_city_id" id="${prefix}residence_city_id">
+                                            <option value="">Select...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="${prefix}document_type">Document Type *</label>
+                                        <select class="form-control" name="${prefix}document_type" id="${prefix}document_type" required>
+                                            <option value="">Select...</option>
+                                            <option value="passport">Passport</option>
+                                            <option value="id_card">ID Card</option>
+                                            <option value="driving_license">Driving License</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="${prefix}document_number">Document Number *</label>
+                                        <input type="text" class="form-control" name="${prefix}document_number" id="${prefix}document_number" required/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="${prefix}document_expedition_date">Issue Date *</label>
+                                        <input type="date" class="form-control" name="${prefix}document_expedition_date" id="${prefix}document_expedition_date" required/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}email">Email</label>
+                                        <input type="email" class="form-control" name="${prefix}email" id="${prefix}email"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="${prefix}phone">Phone</label>
+                                        <input type="tel" class="form-control" name="${prefix}phone" id="${prefix}phone"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" name="${prefix}privacy_consent" id="${prefix}privacy_consent" required/>
+                                <label class="form-check-label" for="${prefix}privacy_consent">
+                                    I consent to data processing for this guest *
+                                </label>
+                            </div>
+                        `;
+                    }
+                    
+                    function setupCountryStateCity(guestIndex) {
+                        // Add event listeners for country/state/city dropdowns
+                        const countrySelect = document.getElementById(`guest_${guestIndex}_residence_country_id`);
+                        const stateSelect = document.getElementById(`guest_${guestIndex}_residence_state_id`);
+                        
+                        if (countrySelect) {
+                            countrySelect.addEventListener('change', function() {
+                                loadStates(guestIndex);
+                            });
+                        }
+                        
+                        if (stateSelect) {
+                            stateSelect.addEventListener('change', function() {
+                                loadCities(guestIndex);
+                            });
+                        }
+                    }
+                    
+                    function loadStates(guestIndex) {
+                        const countryId = document.getElementById(`guest_${guestIndex}_residence_country_id`).value;
+                        const stateSelect = document.getElementById(`guest_${guestIndex}_residence_state_id`);
+                        const citySelect = document.getElementById(`guest_${guestIndex}_residence_city_id`);
+                        
+                        // Clear existing options
+                        stateSelect.innerHTML = '<option value="">Select...</option>';
+                        citySelect.innerHTML = '<option value="">Select...</option>';
+                        
+                        if (countryId) {
+                            fetch(`/remote-checkin/<t t-esc="token_obj.name"/>/states`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    params: {
+                                        country_id: parseInt(countryId)
+                                    }
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.result) {
+                                    data.result.forEach(state => {
+                                        const option = document.createElement('option');
+                                        option.value = state.id;
+                                        option.textContent = state.name;
+                                        stateSelect.appendChild(option);
+                                    });
+                                }
+                            })
+                            .catch(error => console.error('Error loading states:', error));
+                        }
+                    }
+                    
+                    function loadCities(guestIndex) {
+                        const stateId = document.getElementById(`guest_${guestIndex}_residence_state_id`).value;
+                        const citySelect = document.getElementById(`guest_${guestIndex}_residence_city_id`);
+                        
+                        // Clear existing options
+                        citySelect.innerHTML = '<option value="">Select...</option>';
+                        
+                        if (stateId) {
+                            fetch(`/remote-checkin/<t t-esc="token_obj.name"/>/cities`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    params: {
+                                        state_id: parseInt(stateId)
+                                    }
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.result) {
+                                    data.result.forEach(city => {
+                                        const option = document.createElement('option');
+                                        option.value = city.id;
+                                        option.textContent = city.name;
+                                        citySelect.appendChild(option);
+                                    });
+                                }
+                            })
+                            .catch(error => console.error('Error loading cities:', error));
+                        }
+                    }
+                    
+                    function saveDraft() {
+                        alert('Draft functionality will be implemented.');
+                    }
+                    
+                    // Setup existing guests
+                    document.addEventListener('DOMContentLoaded', function() {
+                        for (let i = 0; i &lt; guestCounter; i++) {
+                            setupCountryStateCity(i);
+                        }
+                    });
+                </script>
+            </t>
+        </template>
+
+        <!-- Guest Form Section Template -->
+        <template id="guest_form_section" name="Guest Form Section">
+            <div class="card mb-4" t-attf-id="guest-section-#{guest_index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Guest <t t-esc="guest_index + 1"/></h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger" t-if="guest_index > 0" t-attf-onclick="removeGuest(#{guest_index})">
+                        <i class="fa fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <t t-set="prefix" t-value="'guest_%d_' % guest_index"/>
+                    
+                    <!-- Personal Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}firstname">First Name *</label>
+                                <input type="text" class="form-control" t-attf-name="#{prefix}firstname" t-attf-id="#{prefix}firstname" 
+                                       t-att-value="existing_guest.firstname if existing_guest else ''" required="required"/>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}lastname">Last Name *</label>
+                                <input type="text" class="form-control" t-attf-name="#{prefix}lastname" t-attf-id="#{prefix}lastname"
+                                       t-att-value="existing_guest.lastname if existing_guest else ''" required="required"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Birth Date and Gender -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}birthdate_date">Birth Date *</label>
+                                <input type="date" class="form-control" t-attf-name="#{prefix}birthdate_date" t-attf-id="#{prefix}birthdate_date"
+                                       t-att-value="existing_guest.birthdate_date.strftime('%Y-%m-%d') if existing_guest and existing_guest.birthdate_date else ''" required="required"/>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}gender">Gender *</label>
+                                <select class="form-control" t-attf-name="#{prefix}gender" t-attf-id="#{prefix}gender" required="required">
+                                    <option value="">Select...</option>
+                                    <t t-foreach="genders" t-as="gender">
+                                        <option t-att-value="gender[0]" t-att-selected="'selected' if existing_guest and existing_guest.gender == gender[0] else None">
+                                            <t t-esc="gender[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Nationality and Residence -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}nationality_id">Nationality *</label>
+                                <select class="form-control" t-attf-name="#{prefix}nationality_id" t-attf-id="#{prefix}nationality_id" required="required">
+                                    <option value="">Select...</option>
+                                    <t t-foreach="countries" t-as="country">
+                                        <option t-att-value="country.id" t-att-selected="'selected' if existing_guest and existing_guest.nationality_id.id == country.id else None">
+                                            <t t-esc="country.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}residence_country_id">Country of Residence *</label>
+                                <select class="form-control" t-attf-name="#{prefix}residence_country_id" t-attf-id="#{prefix}residence_country_id" 
+                                        required="required" t-attf-onchange="loadStates(#{guest_index})">
+                                    <option value="">Select...</option>
+                                    <t t-foreach="countries" t-as="country">
+                                        <option t-att-value="country.id" t-att-selected="'selected' if existing_guest and existing_guest.residence_country_id.id == country.id else None">
+                                            <t t-esc="country.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Document Information -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}document_type">Document Type *</label>
+                                <select class="form-control" t-attf-name="#{prefix}document_type" t-attf-id="#{prefix}document_type" required="required">
+                                    <option value="">Select...</option>
+                                    <t t-foreach="document_types" t-as="doc_type">
+                                        <option t-att-value="doc_type[0]" t-att-selected="'selected' if existing_guest and existing_guest.document_type == doc_type[0] else None">
+                                            <t t-esc="doc_type[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}document_number">Document Number *</label>
+                                <input type="text" class="form-control" t-attf-name="#{prefix}document_number" t-attf-id="#{prefix}document_number"
+                                       t-att-value="existing_guest.document_number if existing_guest else ''" required="required"/>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}document_expedition_date">Issue Date *</label>
+                                <input type="date" class="form-control" t-attf-name="#{prefix}document_expedition_date" t-attf-id="#{prefix}document_expedition_date"
+                                       t-att-value="existing_guest.document_expedition_date.strftime('%Y-%m-%d') if existing_guest and existing_guest.document_expedition_date else ''" required="required"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}email">Email</label>
+                                <input type="email" class="form-control" t-attf-name="#{prefix}email" t-attf-id="#{prefix}email"
+                                       t-att-value="existing_guest.email if existing_guest else ''"/>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label t-attf-for="#{prefix}phone">Phone</label>
+                                <input type="tel" class="form-control" t-attf-name="#{prefix}phone" t-attf-id="#{prefix}phone"
+                                       t-att-value="existing_guest.phone if existing_guest else ''"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Privacy Consent -->
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" t-attf-name="#{prefix}privacy_consent" t-attf-id="#{prefix}privacy_consent" 
+                               t-att-checked="'checked' if existing_guest and existing_guest.privacy_consent else None" required="required"/>
+                        <label class="form-check-label" t-attf-for="#{prefix}privacy_consent">
+                            I consent to data processing for this guest *
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Success Template -->
+        <template id="remote_checkin_success" name="Remote Check-in Success">
+            <t t-call="website.layout">
+                <div id="wrap" class="oe_structure oe_empty">
+                    <div class="container mt-4">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-6">
+                                <div class="card shadow">
+                                    <div class="card-header bg-success text-white text-center">
+                                        <h3 class="mb-0">
+                                            <i class="fa fa-check-circle fa-2x mb-2"></i><br/>
+                                            Check-in Complete!
+                                        </h3>
+                                    </div>
+                                    
+                                    <div class="card-body text-center">
+                                        <div class="alert alert-success">
+                                            <h5>Thank you for completing your remote check-in!</h5>
+                                            <p>Your information has been successfully submitted and will be transmitted to the Italian authorities as required by law.</p>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6>Reservation Details:</h6>
+                                            <p><strong><t t-esc="reservation.name"/></strong></p>
+                                            <p><t t-esc="property.name"/></p>
+                                            <p>Check-in: <t t-esc="reservation.checkin.strftime('%d/%m/%Y %H:%M')"/></p>
+                                            <p><t t-esc="guest_count"/> guest(s) registered</p>
+                                        </div>
+                                        
+                                        <div class="alert alert-info">
+                                            <h6>What's Next?</h6>
+                                            <ul class="list-unstyled">
+                                                <li>✓ Your data has been saved</li>
+                                                <li>✓ Registration will be sent to Italian Police</li>
+                                                <li>✓ You can proceed with your arrival at the scheduled time</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <p class="text-muted">
+                                            <small>
+                                                If you need to make changes or have questions, please contact the property directly.
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Error Template -->
+        <template id="remote_checkin_error" name="Remote Check-in Error">
+            <t t-call="website.layout">
+                <div id="wrap" class="oe_structure oe_empty">
+                    <div class="container mt-4">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-6">
+                                <div class="card shadow">
+                                    <div class="card-header bg-danger text-white text-center">
+                                        <h3 class="mb-0">
+                                            <i class="fa fa-exclamation-triangle fa-2x mb-2"></i><br/>
+                                            <t t-esc="error_message or 'Check-in Error'"/>
+                                        </h3>
+                                    </div>
+                                    
+                                    <div class="card-body text-center">
+                                        <div class="alert alert-danger">
+                                            <p><t t-esc="error_detail or 'An error occurred during the check-in process.'"/></p>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6>What can you do?</h6>
+                                            <ul class="list-unstyled">
+                                                <li>• Contact the property directly for assistance</li>
+                                                <li>• Check if your link is still valid</li>
+                                                <li>• Try again later if this is a temporary error</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <a href="/" class="btn btn-primary">
+                                            <i class="fa fa-home"></i> Back to Home
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+    </data>
+</odoo>

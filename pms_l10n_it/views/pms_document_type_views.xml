@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- PMS Document Type Tree View -->
+        <record id="pms_document_type_view_tree" model="ir.ui.view">
+            <field name="name">pms.document.type.tree</field>
+            <field name="model">pms.document.type</field>
+            <field name="arch" type="xml">
+                <tree editable="top" decoration-muted="not active">
+                    <field name="sequence" widget="handle"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="active"/>
+                    <field name="is_oca_compatible" optional="hide"/>
+                    <field name="alloggiati_table_id" optional="hide"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- PMS Document Type Form View -->
+        <record id="pms_document_type_view_form" model="ir.ui.view">
+            <field name="name">pms.document.type.form</field>
+            <field name="model">pms.document.type</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="toggle_active" type="object"
+                                    class="oe_stat_button" icon="fa-archive">
+                                <field name="active" widget="boolean_button"
+                                       options='{"terminology": "archive"}'/>
+                            </button>
+                        </div>
+                        
+                        <div class="alert alert-info" role="alert" invisible="is_oca_compatible">
+                            <strong>Note:</strong> This document type is compatible with OCA PMS standards.
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="sequence"/>
+                            </group>
+                            <group>
+                                <field name="is_oca_compatible" readonly="1"/>
+                                <field name="alloggiati_table_id" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- PMS Document Type Search View -->
+        <record id="pms_document_type_view_search" model="ir.ui.view">
+            <field name="name">pms.document.type.search</field>
+            <field name="model">pms.document.type</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="code"/>
+                    
+                    <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                    <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+                    <filter string="OCA Compatible" name="oca_compatible" domain="[('is_oca_compatible', '=', True)]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Active" name="group_active" context="{'group_by': 'active'}"/>
+                        <filter string="OCA Compatible" name="group_oca" context="{'group_by': 'is_oca_compatible'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- PMS Document Type Action -->
+        <record id="action_pms_document_type" model="ir.actions.act_window">
+            <field name="name">Document Types</field>
+            <field name="res_model">pms.document.type</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="pms_document_type_view_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configure document types for Italian guest registration
+                </p>
+                <p>
+                    Document types are synchronized from the Alloggiati Web system
+                    and are compatible with OCA PMS standards.
+                    You can customize the display names and translations here.
+                </p>
+                <p>
+                    <a type="action" name="%(action_pms_document_type_import_wizard)d" class="btn btn-primary">
+                        Import from CSV
+                    </a>
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item -->
+        <menuitem id="menu_pms_document_type"
+                  name="Document Types"
+                  parent="menu_alloggiati_config"
+                  action="action_pms_document_type"
+                  sequence="30"/>
+
+    </data>
+</odoo><?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Document Type Tree View -->
+        <record id="pms_document_type_view_tree" model="ir.ui.view">
+            <field name="name">pms.document.type.tree</field>
+            <field name="model">pms.document.type</field>
+            <field name="arch" type="xml">
+                <tree editable="top" decoration-muted="not active">
+                    <field name="sequence" widget="handle"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="active"/>
+                    <field name="alloggiati_table_id" optional="hide"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Document Type Form View -->
+        <record id="pms_document_type_view_form" model="ir.ui.view">
+            <field name="name">pms.document.type.form</field>
+            <field name="model">pms.document.type</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="toggle_active" type="object"
+                                    class="oe_stat_button" icon="fa-archive">
+                                <field name="active" widget="boolean_button"
+                                       options='{"terminology": "archive"}'/>
+                            </button>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="sequence"/>
+                            </group>
+                            <group>
+                                <field name="alloggiati_table_id" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Document Type Search View -->
+        <record id="document_type_view_search" model="ir.ui.view">
+            <field name="name">document.type.search</field>
+            <field name="model">document.type</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="code"/>
+                    
+                    <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                    <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+                    
+                    <group expand="0" string="Group By">
+                        <filter string="Active" name="group_active" context="{'group_by': 'active'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Document Type Action -->
+        <record id="action_document_type" model="ir.actions.act_window">
+            <field name="name">Document Types</field>
+            <field name="res_model">document.type</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="document_type_view_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configure document types for Italian guest registration
+                </p>
+                <p>
+                    Document types are synchronized from the Alloggiati Web system.
+                    You can customize the display names and translations here.
+                </p>
+                <p>
+                    <a type="action" name="%(action_document_type_import_wizard)d" class="btn btn-primary">
+                        Import from CSV
+                    </a>
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item -->
+        <menuitem id="menu_document_type"
+                  name="Document Types"
+                  parent="menu_alloggiati_config"
+                  action="action_document_type"
+                  sequence="30"/>
+
+    </data>
+</odoo>

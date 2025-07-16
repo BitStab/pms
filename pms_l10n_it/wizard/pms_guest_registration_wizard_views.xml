@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Guest Registration Wizard Form View -->
+        <record id="pms_guest_registration_wizard_view_form" model="ir.ui.view">
+            <field name="name">pms.guest.registration.wizard.form</field>
+            <field name="model">pms.guest.registration.wizard</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Register Guests with Italian Police</h1>
+                            <h2>Alloggiati Web Registration</h2>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="property_id" readonly="1"/>
+                                <field name="registration_date"/>
+                                <field name="guest_count" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="show_registered_guests"/>
+                                <field name="notes"/>
+                            </group>
+                        </group>
+                        
+                        <separator string="Quick Actions"/>
+                        <div class="oe_button_box">
+                            <button name="action_select_all_guests" 
+                                    string="Select All Unregistered" 
+                                    type="object" 
+                                    class="btn-secondary"/>
+                            <button name="action_select_today_checkins" 
+                                    string="Select Today's Check-ins" 
+                                    type="object" 
+                                    class="btn-secondary"/>
+                            <button name="action_clear_selection" 
+                                    string="Clear Selection" 
+                                    type="object" 
+                                    class="btn-secondary"/>
+                        </div>
+                        
+                        <notebook>
+                            <page string="Available Guests" name="available_guests">
+                                <field name="all_unregistered_guests" readonly="1">
+                                    <tree decoration-success="it_registered == True" decoration-info="it_registered == False">
+                                        <field name="firstname"/>
+                                        <field name="lastname"/>
+                                        <field name="birthdate_date"/>
+                                        <field name="nationality_id"/>
+                                        <field name="document_type"/>
+                                        <field name="document_number"/>
+                                        <field name="arrival"/>
+                                        <field name="departure"/>
+                                        <field name="it_registered"/>
+                                    </tree>
+                                </field>
+                            </page>
+                            
+                            <page string="Selected for Registration" name="selected_guests">
+                                <field name="checkin_partner_ids">
+                                    <tree editable="bottom">
+                                        <field name="firstname"/>
+                                        <field name="lastname"/>
+                                        <field name="birthdate_date"/>
+                                        <field name="nationality_id"/>
+                                        <field name="document_type" required="1"/>
+                                        <field name="document_number" required="1"/>
+                                        <field name="arrival"/>
+                                        <field name="departure"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                        
+                        <div class="alert alert-info" role="alert" invisible="guest_count > 0">
+                            <strong>No guests selected!</strong> Please select at least one guest to register.
+                        </div>
+                        
+                        <div class="alert alert-success" role="alert" invisible="guest_count == 0">
+                            <strong><field name="guest_count"/> guest(s) selected</strong> for registration with Italian Police.
+                        </div>
+                    </sheet>
+                    
+                    <footer>
+                        <button name="action_register_guests" 
+                                string="Send Registration" 
+                                type="object" 
+                                class="btn-primary"
+                                invisible="guest_count == 0"/>
+                        <button name="action_create_draft_registration" 
+                                string="Create Draft" 
+                                type="object" 
+                                class="btn-secondary"
+                                invisible="guest_count == 0"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Guest Registration Wizard Action -->
+        <record id="action_pms_guest_registration_wizard" model="ir.actions.act_window">
+            <field name="name">Register Guests</field>
+            <field name="res_model">pms.guest.registration.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Register guests with Italian Police
+                </p>
+                <p>
+                    Use this wizard to select and register guests with the Italian Police 
+                    through the Alloggiati Web system.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Property Form View with Italian Guest Registration Tab -->
+        <record id="pms_property_view_form_italian" model="ir.ui.view">
+            <field name="name">pms.property.form.italian</field>
+            <field name="model">pms.property</field>
+            <field name="inherit_id" ref="pms.pms_property_views_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//notebook" position="inside">
+                    <page string="Italian Guest Registration" name="italian_guest_registration">
+                        <group>
+                            <group name="italian_config">
+                                <field name="it_guest_registration_enabled"/>
+                                <field name="alloggiati_web_codice_struttura" 
+                                       attrs="{'required': [('it_guest_registration_enabled', '=', True)], 'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                                <field name="alloggiati_web_codice_categoria" 
+                                       attrs="{'required': [('it_guest_registration_enabled', '=', True)], 'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                                <field name="alloggiati_web_test_mode" 
+                                       attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                            </group>
+                            <group name="italian_credentials" attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}">
+                                <field name="alloggiati_web_url"/>
+                                <field name="alloggiati_web_username" 
+                                       attrs="{'required': [('it_guest_registration_enabled', '=', True)]}"/>
+                                <field name="alloggiati_web_password" password="True"
+                                       attrs="{'required': [('it_guest_registration_enabled', '=', True)]}"/>
+                                <field name="alloggiati_web_wskey" password="True"
+                                       attrs="{'required': [('it_guest_registration_enabled', '=', True)]}"/>
+                                <button name="test_alloggiati_web_connection" 
+                                        string="Test Connection" 
+                                        type="object" 
+                                        class="btn-primary"
+                                        attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                            </group>
+                        </group>
+                        
+                        <separator string="Automatic Registration Settings" attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                        <group attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}">
+                            <group name="auto_settings">
+                                <field name="auto_register_checkin"/>
+                                <field name="auto_register_time" 
+                                    placeholder="HH:MM (e.g., 23:00)"
+                                    attrs="{'invisible': [('auto_register_checkin', '=', False)], 'required': [('auto_register_checkin', '=', True)]}"/>
+                            </group>
+                            <group name="statistics">
+                                <field name="last_registration_date" readonly="1"/>
+                                <field name="registration_count" readonly="1"/>
+                            </group>
+                        </group>
+                        
+                        <separator string="Manual Registration" attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                        <group attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}">
+                            <button name="%(pms_l10n_it.action_pms_guest_registration_wizard)d" 
+                                    string="Register Guests" 
+                                    type="action" 
+                                    class="btn-primary"
+                                    context="{'default_property_id': active_id}"/>
+                        </group>
+                        
+                        <separator string="Reference Tables" attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}"/>
+                        <group attrs="{'invisible': [('it_guest_registration_enabled', '=', False)]}">
+                            <div class="oe_button_box">
+                                <button name="action_open_table_manager" 
+                                        string="Manage Tables" 
+                                        type="object" 
+                                        class="btn-secondary"/>
+                                <button name="action_sync_tables" 
+                                        string="Sync Tables Now" 
+                                        type="object" 
+                                        class="btn-secondary"/>
+                            </div>
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+        
+    </data>
+</odoo>
