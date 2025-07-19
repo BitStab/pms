@@ -67,6 +67,11 @@ class PmsCheckinPartner(models.Model):
         ('20', 'Membro Gruppo')
     ], string="Guest Type", compute="_compute_tipo_alloggiato")
 
+    self_checkin_completed = fields.Boolean(
+        string="Self Check-in Completed",
+        default=False
+    )
+
     @api.depends('guest_group_id', 'is_main_guest')
     def _compute_tipo_alloggiato(self):
         """Automatische Bestimmung des Tipo Alloggiato"""

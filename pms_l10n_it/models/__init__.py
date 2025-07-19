@@ -8,5 +8,6 @@ from . import pms_checkin_partner
 from . import pms_guest_registration
 from . import pms_guest_registration_receipt
 from . import pms_guest_registration_dashboard
+from . import pms_remote_checkin_data
 from . import pms_remote_checkin_token
 from . import pms_document_type

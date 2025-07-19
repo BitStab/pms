@@ -3,8 +3,8 @@
 
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError, ValidationError
+import secrets
 import logging
-import uuid
 from datetime import datetime, timedelta
 
 _logger = logging.getLogger(__name__)
@@ -14,12 +14,15 @@ class PmsRemoteCheckinToken(models.Model):
     _name = "pms.remote.checkin.token"
     _description = "Remote Check-in Token"
     _order = "create_date desc"
-
+    _rec_name = "name"
+    
+    # Token Fields
     name = fields.Char(
         string="Token",
         required=True,
-        index=True,
-        default=lambda self: str(uuid.uuid4())
+        copy=False,
+        default=lambda self: self._generate_token(),
+        readonly=True
     )
     
     reservation_id = fields.Many2one(
@@ -33,12 +36,53 @@ class PmsRemoteCheckinToken(models.Model):
         "pms.property",
         string="Property",
         related="reservation_id.pms_property_id",
-        store=True
+        store=True,
+        readonly=True
     )
     
+    folio_id = fields.Many2one(
+        "pms.folio",
+        string="Folio",
+        related="reservation_id.folio_id",
+        store=True,
+        readonly=True
+    )
+    
+    # Main Guest Info
     guest_email = fields.Char(
-        string="Guest Email",
+        string="Main Guest Email",
         required=True
+    )
+    
+    guest_name = fields.Char(
+        string="Main Guest Name",
+        required=True
+    )
+    
+    # Token Status
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('accessed', 'Accessed'),
+        ('completed', 'Completed'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled')
+    ], string="Status", default='draft', tracking=True)
+    
+    # Dates
+    sent_date = fields.Datetime(
+        string="Sent Date",
+        readonly=True
+    )
+    
+    accessed_date = fields.Datetime(
+        string="First Access Date",
+        readonly=True
+    )
+    
+    completed_date = fields.Datetime(
+        string="Completed Date",
+        readonly=True
     )
     
     expires_at = fields.Datetime(
@@ -47,468 +91,542 @@ class PmsRemoteCheckinToken(models.Model):
         default=lambda self: fields.Datetime.now() + timedelta(days=7)
     )
     
-    state = fields.Selection([
-        ('sent', 'Sent'),
-        ('accessed', 'Accessed'),
-        ('completed', 'Completed'),
-        ('expired', 'Expired'),
-    ], string="Status", default='sent', required=True)
-    
-    access_count = fields.Integer(
-        string="Access Count",
-        default=0
-    )
-    
-    last_access = fields.Datetime(
-        string="Last Access"
-    )
-    
-    completed_date = fields.Datetime(
-        string="Completed Date"
-    )
-    
-    # Reminder functionality fields
-    reminder_sent = fields.Boolean(
-        string="Reminder Sent",
-        default=False,
-        help="Indicates if a reminder email has been sent"
-    )
-    
-    reminder_sent_date = fields.Datetime(
-        string="Reminder Sent Date",
-        help="Date and time when the reminder was sent"
-    )
-    
+    # Check-in Data
     checkin_data_ids = fields.One2many(
         "pms.remote.checkin.data",
         "token_id",
         string="Check-in Data"
     )
-
-    checkin_url = fields.Char(
-        string="Check-in URL",
-        compute="_compute_checkin_url"
+    
+    # Guest Invitations
+    guest_invitation_ids = fields.One2many(
+        "pms.guest.invitation",
+        "token_id",
+        string="Guest Invitations"
     )
-
-    @api.depends('name')
-    def _compute_checkin_url(self):
-        for record in self:
-            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-            record.checkin_url = f"{base_url}/remote-checkin/{record.name}"
+    
+    # Statistics
+    access_count = fields.Integer(
+        string="Access Count",
+        default=0,
+        readonly=True
+    )
+    
+    completed_guests = fields.Integer(
+        string="Completed Guests",
+        compute="_compute_completed_guests"
+    )
+    
+    total_guests = fields.Integer(
+        string="Total Guests",
+        compute="_compute_total_guests"
+    )
+    
+    completion_rate = fields.Float(
+        string="Completion Rate (%)",
+        compute="_compute_completion_rate"
+    )
+    
+    # Configuration
+    language = fields.Selection(
+        string="Language",
+        selection="_get_language_selection",
+        default=lambda self: self.env.lang
+    )
+    
+    reminder_sent = fields.Boolean(
+        string="Reminder Sent",
+        default=False
+    )
     
     @api.model
-    def generate_token_for_reservation(self, reservation_id, guest_email):
-        """Generate a new remote check-in token for a reservation"""
-        reservation = self.env['pms.reservation'].browse(reservation_id)
-        
-        if not reservation.exists():
-            raise UserError(_("Reservation not found"))
-        
-        # Check if property has remote check-in enabled
-        if not reservation.pms_property_id.remote_checkin_enabled:
-            raise UserError(_("Remote check-in not available for this property"))
-        
-        # Invalidate existing tokens for this reservation
-        existing_tokens = self.search([
-            ('reservation_id', '=', reservation_id),
-            ('state', 'in', ['sent', 'accessed'])
-        ])
-        existing_tokens.write({'state': 'expired'})
-        
-        # Create new token
-        token = self.create({
-            'reservation_id': reservation_id,
-            'guest_email': guest_email,
-        })
-        
-        # Send email with link
-        token._send_checkin_email()
-        
-        return token
+    def _generate_token(self):
+        """Generate a secure random token"""
+        return secrets.token_urlsafe(32)
     
-    def _send_checkin_email(self):
-        """Send check-in email to guest"""
+    @api.model
+    def _get_language_selection(self):
+        """Get available languages"""
+        return self.env['res.lang'].get_installed()
+    
+    @api.depends('checkin_data_ids', 'guest_invitation_ids')
+    def _compute_completed_guests(self):
+        """Count completed check-ins"""
+        for token in self:
+            completed_data = token.checkin_data_ids.filtered('is_complete')
+            completed_invitations = token.guest_invitation_ids.filtered(
+                lambda i: i.state == 'completed'
+            )
+            token.completed_guests = len(completed_data) + len(completed_invitations)
+    
+    @api.depends('reservation_id.checkin_partner_ids')
+    def _compute_total_guests(self):
+        """Count total expected guests"""
+        for token in self:
+            token.total_guests = len(token.reservation_id.checkin_partner_ids)
+    
+    @api.depends('completed_guests', 'total_guests')
+    def _compute_completion_rate(self):
+        """Calculate completion percentage"""
+        for token in self:
+            if token.total_guests > 0:
+                token.completion_rate = (token.completed_guests / token.total_guests) * 100
+            else:
+                token.completion_rate = 0.0
+    
+    def action_send_token(self):
+        """Send the check-in link to main guest"""
         self.ensure_one()
         
-        template = self.env.ref(
-            'pms_l10n_it.email_template_remote_checkin', 
-            raise_if_not_found=False
-        )
+        if self.state not in ['draft', 'sent']:
+            raise UserError(_("Token has already been used or expired"))
         
+        # Send email
+        template = self.env.ref('pms_l10n_it.email_template_remote_checkin', False)
         if template:
-            try:
-                template.send_mail(self.id)
-                self.state = 'sent'
-                _logger.info("Remote check-in email sent for token %s to %s", self.name, self.guest_email)
-            except Exception as e:
-                _logger.error("Failed to send check-in email for token %s: %s", self.name, str(e))
-                raise UserError(_("Failed to send check-in email: %s") % str(e))
-        else:
-            _logger.warning("Remote check-in email template not found")
-            raise UserError(_("Remote check-in email template not configured"))
-    
-    def _send_reminder_email(self):
-        """Send a reminder email to the guest for remote check-in"""
-        self.ensure_one()
-        
-        # Check if token is still valid
-        if self.state not in ['sent', 'accessed']:
-            _logger.warning("Cannot send reminder for token %s in state %s", self.name, self.state)
-            return False
-        
-        if self.expires_at < fields.Datetime.now():
-            self.state = 'expired'
-            _logger.warning("Cannot send reminder for expired token %s", self.name)
-            return False
-        
-        # Check if reminder was already sent
-        if self.reminder_sent:
-            _logger.info("Reminder already sent for token %s", self.name)
-            return True
-        
-        template = self.env.ref(
-            'pms_l10n_it.email_template_remote_checkin_reminder', 
-            raise_if_not_found=False
-        )
-        
-        if template:
-            try:
-                template.send_mail(self.id, force_send=True)
-                
-                # Mark reminder as sent
-                self.write({
-                    'reminder_sent': True,
-                    'reminder_sent_date': fields.Datetime.now()
-                })
-                
-                _logger.info("Reminder email sent for token %s to %s", self.name, self.guest_email)
-                return True
-                
-            except Exception as e:
-                _logger.error("Failed to send reminder email for token %s: %s", self.name, str(e))
-                return False
-        else:
-            _logger.warning("Reminder email template not found")
-            return False
-
-    def get_checkin_url(self):
-        """Get the check-in URL for this token"""
-        self.ensure_one()
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        return f"{base_url}/remote-checkin/{self.name}"
-    
-    def validate_token_access(self):
-        """Validate token for access"""
-        self.ensure_one()
-        
-        if self.state == 'expired':
-            raise UserError(_("This check-in link has expired"))
-        
-        if self.expires_at < fields.Datetime.now():
-            self.state = 'expired'
-            raise UserError(_("This check-in link has expired"))
-        
-        # Update access tracking
-        self.write({
-            'access_count': self.access_count + 1,
-            'last_access': fields.Datetime.now(),
-            'state': 'accessed' if self.state == 'sent' else self.state
-        })
-        
-        return True
-    
-    def complete_checkin(self):
-        """Mark check-in as completed"""
-        self.ensure_one()
-        
-        if self.state != 'accessed':
-            raise UserError(_("Invalid token state for completion"))
-        
-        # Validate that all required data is provided
-        if not self.checkin_data_ids:
-            raise UserError(_("No check-in data provided"))
-        
-        # Transfer data to actual checkin partners
-        self._transfer_to_checkin_partners()
+            template.with_context(lang=self.language).send_mail(self.id, force_send=True)
         
         self.write({
-            'state': 'completed',
-            'completed_date': fields.Datetime.now()
+            'state': 'sent',
+            'sent_date': fields.Datetime.now()
         })
-        
-        _logger.info("Remote check-in completed for token %s", self.name)
-    
-    def _transfer_to_checkin_partners(self):
-        """Transfer remote check-in data to actual checkin partners"""
-        self.ensure_one()
-        
-        for data in self.checkin_data_ids:
-            # Find or create checkin partner
-            checkin_partner = self.env['pms.checkin.partner'].search([
-                ('reservation_id', '=', self.reservation_id.id),
-                ('firstname', '=', data.firstname),
-                ('lastname', '=', data.lastname),
-            ], limit=1)
-            
-            if not checkin_partner:
-                checkin_partner = self.env['pms.checkin.partner'].create({
-                    'reservation_id': self.reservation_id.id,
-                    'firstname': data.firstname,
-                    'lastname': data.lastname,
-                })
-            
-            # Update with remote check-in data
-            checkin_partner.write({
-                'birthdate_date': data.birthdate_date,
-                'nationality_id': data.nationality_id.id if data.nationality_id else False,
-                'residence_country_id': data.residence_country_id.id if data.residence_country_id else False,
-                'residence_state_id': data.residence_state_id.id if data.residence_state_id else False,
-                'residence_city_id': data.residence_city_id.id if data.residence_city_id else False,
-                'document_type': data.document_type,
-                'document_number': data.document_number,
-                'document_expedition_date': data.document_expedition_date,
-                'gender': data.gender,
-                'email': data.email,
-                'phone': data.phone,
-                'arrival': data.arrival or self.reservation_id.checkin,
-                'departure': data.departure or self.reservation_id.checkout,
-                'state': 'precheckin',  # Mark as pre-checked-in
-            })
-            
-            _logger.info("Transferred remote check-in data for guest %s %s", 
-                        data.firstname, data.lastname)
-
-    def action_resend_email(self):
-        """Resend the check-in email"""
-        self.ensure_one()
-        
-        if self.state == 'expired':
-            raise UserError(_("Cannot resend email for expired token"))
-        
-        self._send_checkin_email()
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Email Resent'),
-                'message': _('Check-in email has been resent to %s') % self.guest_email,
+                'title': _('Check-in Link Sent'),
+                'message': _('Check-in link has been sent to %s') % self.guest_email,
                 'type': 'success',
             }
         }
     
     def action_send_reminder(self):
-        """Send reminder email manually"""
+        """Send reminder email"""
         self.ensure_one()
         
-        if self._send_reminder_email():
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Reminder Sent'),
-                    'message': _('Reminder email has been sent to %s') % self.guest_email,
-                    'type': 'success',
-                }
-            }
-        else:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Reminder Failed'),
-                    'message': _('Failed to send reminder email to %s') % self.guest_email,
-                    'type': 'danger',
-                }
-            }
-    
-    def action_expire_token(self):
-        """Manually expire the token"""
-        self.ensure_one()
+        if self.state != 'sent':
+            raise UserError(_("Can only send reminders for sent tokens"))
         
-        self.state = 'expired'
+        if self.reminder_sent:
+            raise UserError(_("Reminder has already been sent"))
+        
+        # Send reminder email
+        template = self.env.ref('pms_l10n_it.email_template_remote_checkin_reminder', False)
+        if template:
+            template.with_context(lang=self.language).send_mail(self.id, force_send=True)
+        
+        self.reminder_sent = True
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Token Expired'),
-                'message': _('Check-in token has been expired'),
-                'type': 'info',
+                'title': _('Reminder Sent'),
+                'message': _('Reminder has been sent to %s') % self.guest_email,
+                'type': 'success',
             }
         }
+    
+    def action_send_guest_invitations(self, guest_emails):
+        """Send check-in invitations to additional guests"""
+        self.ensure_one()
+        
+        if not guest_emails:
+            raise UserError(_("No guest emails provided"))
+        
+        created_invitations = self.env['pms.guest.invitation']
+        
+        for email in guest_emails:
+            # Skip if invitation already exists
+            existing = self.guest_invitation_ids.filtered(
+                lambda i: i.guest_email == email
+            )
+            if existing:
+                continue
+            
+            # Create invitation
+            invitation = self.env['pms.guest.invitation'].create({
+                'token_id': self.id,
+                'guest_email': email,
+                'guest_token': self._generate_token(),
+                'language': self.language,
+            })
+            
+            # Send invitation email
+            invitation.action_send_invitation()
+            created_invitations |= invitation
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Invitations Sent'),
+                'message': _('%d invitations sent successfully') % len(created_invitations),
+                'type': 'success',
+            }
+        }
+    
+    def action_mark_accessed(self):
+        """Mark token as accessed"""
+        self.ensure_one()
+        
+        if self.state == 'sent':
+            self.write({
+                'state': 'accessed',
+                'accessed_date': fields.Datetime.now(),
+                'access_count': self.access_count + 1
+            })
+        else:
+            self.access_count += 1
+    
+    def action_complete_checkin(self):
+        """Mark check-in as completed"""
+        self.ensure_one()
+        
+        if self.state in ['sent', 'accessed']:
+            # Validate all required data is complete
+            if not self._validate_completion():
+                raise UserError(_("Not all required guest data has been provided"))
+            
+            # Transfer data to checkin partners
+            self._transfer_to_checkin_partners()
+            
+            self.write({
+                'state': 'completed',
+                'completed_date': fields.Datetime.now()
+            })
+            
+            # Create guest groups if applicable
+            self._create_guest_groups()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Check-in Completed'),
+                    'message': _('All guest data has been successfully collected'),
+                    'type': 'success',
+                }
+            }
 
+    def validate_token_access(self):
+        """Validate token access and mark as accessed"""
+        self.ensure_one()
+        
+        if self.state not in ['draft', 'sent']:
+            raise UserError(_("Token has already been used or expired"))
+        
+        # Mark as accessed
+        self.action_mark_accessed()
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Token Accessed'),
+                'message': _('You have successfully accessed the check-in link'),
+                'type': 'success',
+            }
+        }   
+    
+    def _validate_completion(self):
+        """Validate that all required data is complete"""
+        self.ensure_one()
+        
+        # Check main guest data
+        if not self.checkin_data_ids:
+            return False
+        
+        main_guest_data = self.checkin_data_ids.filtered('is_main_guest')
+        if not main_guest_data or not main_guest_data[0].is_complete:
+            return False
+        
+        # Check all invited guests have completed
+        pending_invitations = self.guest_invitation_ids.filtered(
+            lambda i: i.state not in ['completed', 'cancelled']
+        )
+        if pending_invitations:
+            return False
+        
+        return True
+    
+    def _transfer_to_checkin_partners(self):
+        """Transfer collected data to pms.checkin.partner records"""
+        self.ensure_one()
+        
+        # Transfer main guest data
+        for data in self.checkin_data_ids:
+            checkin_partner = self._find_or_create_checkin_partner(data)
+            data._transfer_to_checkin_partner(checkin_partner)
+        
+        # Transfer invitation data
+        for invitation in self.guest_invitation_ids.filtered(lambda i: i.state == 'completed'):
+            if invitation.checkin_data_id:
+                checkin_partner = self._find_or_create_checkin_partner(invitation.checkin_data_id)
+                invitation.checkin_data_id._transfer_to_checkin_partner(checkin_partner)
+    
+    def _find_or_create_checkin_partner(self, checkin_data):
+        """Find existing or create new checkin partner"""
+        # Try to find by name and reservation
+        existing = self.env['pms.checkin.partner'].search([
+            ('reservation_id', '=', self.reservation_id.id),
+            ('firstname', '=', checkin_data.firstname),
+            ('lastname', '=', checkin_data.lastname),
+        ], limit=1)
+        
+        if existing:
+            return existing
+        
+        # Create new
+        return self.env['pms.checkin.partner'].create({
+            'reservation_id': self.reservation_id.id,
+            'firstname': checkin_data.firstname,
+            'lastname': checkin_data.lastname,
+            'email': checkin_data.email,
+            'self_checkin_completed': True,
+        })
+    
+    def _create_guest_groups(self):
+        """Create guest groups after check-in completion"""
+        self.ensure_one()
+        
+        # Check if group creation is needed
+        if len(self.reservation_id.checkin_partner_ids) >= 2:
+            # Check if group already exists
+            existing_group = self.env['pms.guest.group'].search([
+                ('reservation_id', '=', self.reservation_id.id)
+            ], limit=1)
+            
+            if not existing_group:
+                # Auto-create group
+                groups = self.env['pms.guest.group'].auto_create_groups(
+                    reservation_ids=[self.reservation_id.id]
+                )
+                if groups:
+                    _logger.info("Auto-created guest group for reservation %s", 
+                                self.reservation_id.name)
+    
+    def get_checkin_url(self):
+        """Get the self check-in URL"""
+        self.ensure_one()
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return f"{base_url}/checkin/{self.name}"
+    
+    @api.model
+    def _cron_check_expired_tokens(self):
+        """Cron job to mark expired tokens"""
+        expired_tokens = self.search([
+            ('state', 'in', ['draft', 'sent', 'accessed']),
+            ('expires_at', '<', fields.Datetime.now())
+        ])
+        
+        expired_tokens.write({'state': 'expired'})
+        _logger.info("Marked %d tokens as expired", len(expired_tokens))
+    
+    @api.model
+    def _cron_send_reminders(self):
+        """Cron job to send check-in reminders"""
+        # Get properties with reminder settings
+        properties = self.env['pms.property'].search([
+            ('remote_checkin_enabled', '=', True),
+            ('remote_checkin_reminder_hours', '>', 0)
+        ])
+        
+        for prop in properties:
+            reminder_time = fields.Datetime.now() + timedelta(
+                hours=prop.remote_checkin_reminder_hours
+            )
+            
+            # Find tokens needing reminders
+            tokens = self.search([
+                ('property_id', '=', prop.id),
+                ('state', '=', 'sent'),
+                ('reminder_sent', '=', False),
+                ('reservation_id.checkin', '<=', reminder_time),
+                ('reservation_id.checkin', '>', fields.Datetime.now())
+            ])
+            
+            for token in tokens:
+                try:
+                    token.action_send_reminder()
+                except Exception as e:
+                    _logger.error("Failed to send reminder for token %s: %s", 
+                                 token.name, str(e))
 
-class PmsRemoteCheckinData(models.Model):
-    _name = "pms.remote.checkin.data"
-    _description = "Remote Check-in Guest Data"
-    _order = "create_date"
+    def complete_checkin(self):
+        """
+        Complete the remote check-in process by transferring collected data 
+        from pms.remote.checkin.data to pms.checkin.partner records.
+        Called by the controller after guest data has been collected.
+        """
+        self.ensure_one()
+        
+        if self.state not in ['sent', 'accessed']:
+            raise UserError(_('This token has already been used or is invalid.'))
+        
+        if not self.checkin_data_ids:
+            raise UserError(_('No check-in data found.'))
+        
+        if self.state == 'sent':
+            self.action_mark_accessed()
+        
+        updated_partners = self.env['pms.checkin.partner']
+        
+        for checkin_data in self.checkin_data_ids:
+            # Find matching checkin partner
+            domain = [
+                ('reservation_id', '=', self.reservation_id.id),
+                ('firstname', 'ilike', checkin_data.firstname),
+                ('lastname', 'ilike', checkin_data.lastname),
+            ]
+            
+            checkin_partner = self.env['pms.checkin.partner'].search(domain, limit=1)
+            
+            if not checkin_partner:
+                _logger.warning(
+                    "No matching checkin partner found for %s %s",
+                    checkin_data.firstname,
+                    checkin_data.lastname
+                )
+                continue
+            
+            # Update checkin partner with collected data
+            update_vals = {
+                'birthdate_date': checkin_data.birthdate_date,
+                'gender': checkin_data.gender,
+                'email': checkin_data.email,
+                'mobile': checkin_data.phone,
+                'nationality_id': checkin_data.nationality_id.id if checkin_data.nationality_id else False,
+                'document_type': checkin_data.document_type,
+                'document_number': checkin_data.document_number,
+                'document_expedition_date': checkin_data.document_expedition_date,
+                'residence_country_id': checkin_data.residence_country_id.id if checkin_data.residence_country_id else False,
+                'residence_state_id': checkin_data.residence_state_id.id if checkin_data.residence_state_id else False,
+                'residence_city_id': checkin_data.residence_city_id.id if checkin_data.residence_city_id else False,
+                'self_checkin_completed': True,
+            }
+            
+            # Add Italian specific fields if they exist
+            if hasattr(checkin_data, 'place_of_birth') and checkin_data.place_of_birth:
+                update_vals['place_of_birth'] = checkin_data.place_of_birth
+            
+            if hasattr(checkin_data, 'document_issue_place') and checkin_data.document_issue_place:
+                update_vals['document_issue_place'] = checkin_data.document_issue_place
+            
+            # Update state if we have enough data
+            if update_vals.get('document_number') and update_vals.get('birthdate_date'):
+                update_vals['state'] = 'onboard'
+            
+            checkin_partner.write(update_vals)
+            updated_partners |= checkin_partner
+        
+        if not updated_partners:
+            raise UserError(_('Could not match any check-in data with reservation guests.'))
+        
+        # Update token state
+        self.write({
+            'state': 'completed',
+            'completed_date': fields.Datetime.now(),
+            'completed_guests': len(updated_partners),
+        })
+        
+        _logger.info(
+            "Remote check-in completed for token %s - %d guests updated",
+            self.name,
+            len(updated_partners)
+        )
+        
+        return True
 
+class PmsGuestInvitation(models.Model):
+    _name = "pms.guest.invitation"
+    _description = "Guest Check-in Invitation"
+    _order = "create_date desc"
+    
     token_id = fields.Many2one(
         "pms.remote.checkin.token",
-        string="Token",
+        string="Main Token",
         required=True,
         ondelete="cascade"
     )
     
-    # Guest personal information
-    firstname = fields.Char(
-        string="First Name",
+    guest_email = fields.Char(
+        string="Guest Email",
         required=True
     )
     
-    lastname = fields.Char(
-        string="Last Name",
-        required=True
-    )
-    
-    birthdate_date = fields.Date(
-        string="Birth Date",
-        required=True
-    )
-    
-    gender = fields.Selection([
-        ('M', 'Male'),
-        ('F', 'Female'),
-    ], string="Gender", required=True)
-    
-    nationality_id = fields.Many2one(
-        "res.country",
-        string="Nationality",
-        required=True
-    )
-    
-    # Residence information
-    residence_country_id = fields.Many2one(
-        "res.country",
-        string="Country of Residence",
-        required=True
-    )
-    
-    residence_state_id = fields.Many2one(
-        "res.country.state",
-        string="State of Residence"
-    )
-    
-    residence_city_id = fields.Many2one(
-        "res.city",
-        string="City of Residence"
-    )
-    
-    # Document information
-    document_type = fields.Selection([
-        ('passport', 'Passport'),
-        ('id_card', 'ID Card'),
-        ('driving_license', 'Driving License'),
-        ('other', 'Other'),
-    ], string="Document Type", required=True)
-    
-    document_number = fields.Char(
-        string="Document Number",
-        required=True
-    )
-    
-    document_expedition_date = fields.Date(
-        string="Document Issue Date",
-        required=True
-    )
-    
-    document_expiry_date = fields.Date(
-        string="Document Expiry Date"
-    )
-    
-    # Contact information
-    email = fields.Char(
-        string="Email"
-    )
-    
-    phone = fields.Char(
-        string="Phone"
-    )
-    
-    # Stay information
-    arrival = fields.Date(
-        string="Arrival Date"
-    )
-    
-    departure = fields.Date(
-        string="Departure Date"
-    )
-    
-    # Privacy and consent
-    privacy_consent = fields.Boolean(
-        string="Privacy Consent",
+    guest_token = fields.Char(
+        string="Guest Token",
         required=True,
-        help="Guest has consented to data processing"
+        copy=False,
+        readonly=True
     )
     
-    marketing_consent = fields.Boolean(
-        string="Marketing Consent",
-        help="Guest has consented to marketing communications"
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('accessed', 'Accessed'),
+        ('completed', 'Completed'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled')
+    ], string="Status", default='draft', tracking=True)
+    
+    sent_date = fields.Datetime(
+        string="Sent Date",
+        readonly=True
     )
     
-    # Additional fields for Italian registration
-    place_of_birth = fields.Char(
-        string="Place of Birth",
-        help="City or place where the guest was born"
+    accessed_date = fields.Datetime(
+        string="Accessed Date",
+        readonly=True
     )
     
-    document_issue_place = fields.Char(
-        string="Document Issue Place",
-        help="Place where the document was issued"
+    completed_date = fields.Datetime(
+        string="Completed Date",
+        readonly=True
     )
     
-    # Data validation
-    @api.constrains('birthdate_date')
-    def _check_birthdate(self):
-        for record in self:
-            if record.birthdate_date and record.birthdate_date > fields.Date.today():
-                raise ValidationError(_("Birth date cannot be in the future"))
-            
-            # Check minimum age (usually 0, but some countries have restrictions)
-            if record.birthdate_date:
-                age = (fields.Date.today() - record.birthdate_date).days / 365.25
-                if age > 150:  # Reasonable maximum age
-                    raise ValidationError(_("Birth date seems unrealistic"))
+    checkin_data_id = fields.Many2one(
+        "pms.remote.checkin.data",
+        string="Check-in Data",
+        readonly=True
+    )
     
-    @api.constrains('document_expedition_date', 'document_expiry_date')
-    def _check_document_dates(self):
-        for record in self:
-            if record.document_expedition_date and record.document_expedition_date > fields.Date.today():
-                raise ValidationError(_("Document issue date cannot be in the future"))
-            
-            if (record.document_expedition_date and record.document_expiry_date and 
-                record.document_expiry_date <= record.document_expedition_date):
-                raise ValidationError(_("Document expiry date must be after issue date"))
-            
-            # Check if document is expired
-            if record.document_expiry_date and record.document_expiry_date < fields.Date.today():
-                raise ValidationError(_("Document has expired"))
+    language = fields.Selection(
+        string="Language",
+        selection="_get_language_selection",
+        required=True
+    )
     
-    @api.constrains('arrival', 'departure')
-    def _check_stay_dates(self):
-        for record in self:
-            if record.arrival and record.departure and record.departure <= record.arrival:
-                raise ValidationError(_("Departure date must be after arrival date"))
-            
-            if record.arrival and record.arrival < fields.Date.today():
-                # Allow past arrival dates for flexibility, but log a warning
-                _logger.warning("Guest %s %s has arrival date in the past: %s", 
-                              record.firstname, record.lastname, record.arrival)
-    
-    @api.constrains('email')
-    def _check_email(self):
-        for record in self:
-            if record.email:
-                import re
-                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-                if not re.match(email_pattern, record.email):
-                    raise ValidationError(_("Invalid email format"))
+    access_count = fields.Integer(
+        string="Access Count",
+        default=0,
+        readonly=True
+    )
     
     @api.model
-    def create(self, vals_list):
-        """Override create to log guest data creation"""
-        result = super().create(vals_list)
-        _logger.info("Remote check-in data created for guest %s %s", 
-                    result.firstname, result.lastname)
-        return result
+    def _get_language_selection(self):
+        """Get available languages"""
+        return self.env['res.lang'].get_installed()
+    
+    def action_send_invitation(self):
+        """Send invitation email to guest"""
+        self.ensure_one()
+        
+        template = self.env.ref('pms_l10n_it.email_template_guest_invitation', False)
+        if template:
+            template.with_context(lang=self.language).send_mail(self.id, force_send=True)
+        
+        self.write({
+            'state': 'sent',
+            'sent_date': fields.Datetime.now()
+        })
+    
+    def get_checkin_url(self):
+        """Get the guest-specific check-in URL"""
+        self.ensure_one()
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return f"{base_url}/checkin/guest/{self.guest_token}"
+
+    

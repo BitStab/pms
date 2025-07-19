@@ -75,6 +75,34 @@ class PmsGuestGroup(models.Model):
             count += len(group.dependent_guest_ids)   # Dependent guests
             group.guest_count = count
 
+    def auto_create_groups(self, reservation_ids):
+        """Automatically create guest groups for reservations"""
+        for reservation in reservation_ids:
+            if not reservation.checkin_partner_ids:
+                continue
+            
+            main_guest = reservation.checkin_partner_ids.filtered(lambda g: g.is_main_guest)
+            if not main_guest:
+                continue
+            
+            group = reservation.env['pms.guest.group'].create({
+                'reservation_id': reservation.id,
+                'main_guest_id': main_guest.id,
+                'group_type': 'family',  # Default to family, can be adjusted
+            })
+            
+            # Add all other guests to the group
+            other_guests = reservation.checkin_partner_ids - main_guest
+            group.dependent_guest_ids = [(6, 0, other_guests.ids)]
+            
+            _logger.info(f"Created guest group {group.display_name} for reservation {reservation.name}")
+
+    GROUP_TYPE_NAMES = {
+        'family': _('Family (Famiglia)'),
+        'group': _('Travel Group (Gruppo)'),
+        'individual': _('Individual')
+    }
+
     def action_auto_detect_group(self):
         """Automatische Erkennung des Gruppentyps"""
         self.ensure_one()
@@ -84,12 +112,16 @@ class PmsGuestGroup(models.Model):
         
         self.write({'group_type': detected_type})
         
+        # Nach dem write() hat self.group_type den neuen Wert
+        field = self._fields['group_type']
+        display_name = dict(field.selection)[self.group_type]
+        
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Group Type Detected'),
-                'message': _('Group type set to: %s') % dict(self._fields['group_type'].selection)[detected_type],
+                'message': _('Group type set to: %s') % display_name,
                 'type': 'success',
             }
         }

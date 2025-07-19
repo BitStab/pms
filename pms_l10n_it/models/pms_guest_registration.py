@@ -43,6 +43,7 @@ class PmsGuestRegistration(models.Model):
     
     state = fields.Selection([
         ('draft', 'Draft'),
+        ('validated', 'Validated'),
         ('sent', 'Sent'),
         ('error', 'Error'),
         ('cancelled', 'Cancelled'),
@@ -121,8 +122,8 @@ class PmsGuestRegistration(models.Model):
                 self.state = 'sent'
                 self.transmission_date = fields.Datetime.now()
                 self.response_message = response.get('message', '')
-                self.property_id.last_registration_date = fields.Datetime.now()
-                self.property_id.registration_count += 1
+                self.property_id.last_guest_registration = fields.Datetime.now()
+                self.property_id.guest_registration_count += 1
                 
                 # Mark guests as registered
                 self.checkin_partner_ids.write({'it_registered': True})
@@ -231,7 +232,7 @@ class PmsGuestRegistration(models.Model):
                 return token_info
             
             token = token_info['token']
-            username = self.property_id.alloggiati_web_username
+            username = self.property_id.alloggiati_web_user
             
             # Prepare SOAP envelope for Test method
             soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
@@ -499,7 +500,7 @@ class PmsGuestRegistration(models.Model):
                 return token_info
             
             token = token_info['token']
-            username = self.property_id.alloggiati_web_username
+            username = self.property_id.alloggiati_web_user
             
             # Prepare SOAP envelope for Send method
             soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
@@ -568,7 +569,7 @@ class PmsGuestRegistration(models.Model):
     def _get_authentication_token(self):
         """Get authentication token from Alloggiati Web"""
         try:
-            username = self.property_id.alloggiati_web_username
+            username = self.property_id.alloggiati_web_user
             password = self.property_id.alloggiati_web_password
             wskey = self.property_id.alloggiati_web_wskey
             
