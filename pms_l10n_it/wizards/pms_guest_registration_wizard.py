@@ -4,6 +4,7 @@
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError
 from datetime import datetime, timedelta
+from pytz import timezone
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -86,7 +87,7 @@ class PmsGuestRegistrationWizard(models.TransientModel):
         if property_id:
             return property_id
         # Try to get from user's default property if available
-        return self.env.user.property_ids[0] if self.env.user.property_ids else False
+        return self.env.user.pms_property_ids[0] if self.env.user.pms_property_ids else False
     
     @api.model
     def _default_checkin_partner_ids(self):
@@ -103,7 +104,7 @@ class PmsGuestRegistrationWizard(models.TransientModel):
         
         # Fallback to basic selection
         return self.env['pms.checkin.partner'].search([
-            ('property_id', '=', property_id),
+            ('pms_property_id', '=', property_id),
             ('state', '=', 'onboard'),
             ('it_registered', '=', False),
             ('arrival', '=', fields.Date.today()),
@@ -119,12 +120,12 @@ class PmsGuestRegistrationWizard(models.TransientModel):
             # Property filter
             if wizard.property_id:
                 if 'pms_property_id' in self.env['pms.checkin.partner']._fields:
-                    domain.append(('pms_property_id', '=', wizard.property_id.id))
+                    domain.append(('pms_property_id', '=', str(wizard.property_id.id)))
                 elif 'property_id' in self.env['pms.checkin.partner']._fields:
-                    domain.append(('property_id', '=', wizard.property_id.id))
+                    domain.append(('property_id', '=', str(wizard.property_id.id)))
                 else:
                     reservations = self.env['pms.reservation'].search([
-                        ('pms_property_id', '=', wizard.property_id.id),
+                        ('pms_property_id', '=', str(wizard.property_id.id)),
                         ('state', 'in', ['onboard', 'confirm']),
                     ])
                     domain.append(('reservation_id', 'in', reservations.ids))
@@ -134,26 +135,28 @@ class PmsGuestRegistrationWizard(models.TransientModel):
                 domain.append(('it_registered', '=', False))
             
             # Date filter based on selection
+            user_tz = self.env.user.tz or 'UTC'
+            user_timezone = timezone(user_tz)
             if wizard.filter_by_arrival == 'today':
                 domain.extend([
-                    ('arrival', '>=', fields.Date.today()),
-                    ('arrival', '<', fields.Date.today() + timedelta(days=1))
+                    ('arrival', '>=', fields.Date.today().isoformat()),
+                    ('arrival', '<', (fields.Date.today() + timedelta(days=1)).isoformat())
                 ])
             elif wizard.filter_by_arrival == 'yesterday':
                 domain.extend([
-                    ('arrival', '>=', fields.Date.today() - timedelta(days=1)),
-                    ('arrival', '<', fields.Date.today())
+                    ('arrival', '>=', (fields.Date.today() - timedelta(days=1)).isoformat()),
+                    ('arrival', '<', fields.Date.today().isoformat())
                 ])
             elif wizard.filter_by_arrival == 'week':
                 domain.extend([
-                    ('arrival', '>=', fields.Date.today() - timedelta(days=7)),
-                    ('arrival', '<=', fields.Date.today())
+                    ('arrival', '>=', fields.Date.today() - timedelta(days=7)).isoformat()),
+                    ('arrival', '<=', fields.Date.today().isoformat())
                 ])
             elif wizard.filter_by_arrival == 'custom':
                 if wizard.date_from:
-                    domain.append(('arrival', '>=', wizard.date_from))
+                    domain.append(('arrival', '>=', wizard.date_from.isoformat()))
                 if wizard.date_to:
-                    domain.append(('arrival', '<=', wizard.date_to))
+                    domain.append(('arrival', '<=', wizard.date_to.isoformat()))
             
             wizard.all_unregistered_guests = self.env['pms.checkin.partner'].search(domain)
     

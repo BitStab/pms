@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2025 IT-Stecher -->
+<!-- License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <data>
+
+        <!-- PMS Document Type Import Wizard Form - KORRIGIERT -->
+        <record id="pms_document_type_import_wizard_view_form" model="ir.ui.view">
+            <field name="name">pms.document.type.import.wizard.form</field>
+            <field name="model">pms.document.type.import.wizard</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Import Document Types</h1>
+                            <p>Import Italian document types from Alloggiati Web CSV file</p>
+                        </div>
+                        
+                        <group invisible="context.get('show_result', False)">
+                            <group string="File Upload">
+                                <field name="csv_file" filename="csv_filename" required="1"/>
+                                <field name="csv_filename" invisible="1"/>
+                            </group>
+                            <group string="Import Options">
+                                <field name="update_existing"/>
+                                <field name="deactivate_missing"/>
+                            </group>
+                        </group>
+                        
+                        <group invisible="not context.get('show_result', False)">
+                            <field name="import_result" readonly="1" nolabel="1" widget="text"/>
+                        </group>
+                        
+                        <div class="alert alert-info" role="alert" invisible="context.get('show_result', False)">
+                            <h4><i class="fa fa-info-circle"></i> Import Instructions</h4>
+                            <ul>
+                                <li>Upload the <strong>documenti.csv</strong> file from Alloggiati Web</li>
+                                <li>CSV format: Code;Description (semicolon delimiter)</li>
+                                <li>First row should contain headers or data</li>
+                                <li>Encoding: UTF-8 recommended</li>
+                                <li>Existing records will be updated by default</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="alert alert-warning" role="alert" invisible="context.get('show_result', False)">
+                            <strong>Note:</strong> This import will create PMS-compatible document types 
+                            for Italian guest registration according to Alloggiati Web standards.
+                        </div>
+                    </sheet>
+                    
+                    <footer>
+                        <button name="action_import" 
+                                string="Import Document Types" 
+                                type="object" 
+                                class="btn-primary"
+                                invisible="context.get('show_result', False)"/>
+                        <button name="action_close" 
+                                string="Close" 
+                                type="object" 
+                                class="btn-secondary"
+                                invisible="not context.get('show_result', False)"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- PMS Document Type Import Wizard Action -->
+        <record id="action_pms_document_type_import_wizard" model="ir.actions.act_window">
+            <field name="name">Import Document Types</field>
+            <field name="res_model">pms.document.type.import.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Import Italian Document Types
+                </p>
+                <p>
+                    Use this wizard to import official Italian document types 
+                    from the documenti.csv file provided by Alloggiati Web system.
+                    The imported types will be OCA PMS compatible.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item for Document Type Import -->
+        <menuitem id="menu_pms_document_type_import"
+                  name="Import Document Types"
+                  parent="pms_l10n_it.menu_alloggiati_config"
+                  action="action_pms_document_type_import_wizard"
+                  sequence="25"/>
+
+    </data>
+</odoo>

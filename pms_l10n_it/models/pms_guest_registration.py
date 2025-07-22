@@ -122,8 +122,7 @@ class PmsGuestRegistration(models.Model):
                 self.state = 'sent'
                 self.transmission_date = fields.Datetime.now()
                 self.response_message = response.get('message', '')
-                self.property_id.last_guest_registration = fields.Datetime.now()
-                self.property_id.guest_registration_count += 1
+                self.property_id.it_last_registration_date = fields.Datetime.now()
                 
                 # Mark guests as registered
                 self.checkin_partner_ids.write({'it_registered': True})

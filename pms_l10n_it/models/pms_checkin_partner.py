@@ -30,21 +30,12 @@ class PmsCheckinPartner(models.Model):
         string="Exemption Notes",
         help="Additional notes for exemption"
     )
-    
-    # Additional fields that might be required for Italian registration
-    document_type = fields.Selection(
-        selection='_get_document_type_selection',
-        string="Document Type"
-    )
-    
-    document_number = fields.Char(
-        string="Document Number",
-        help="Document number for identification"
-    )
-    
-    document_expedition_date = fields.Date(
-        string="Document Expedition Date",
-        help="Date when the document was issued"
+
+    alloggiati_document_type = fields.Char(
+        string="Alloggiati Document Type Code",
+        compute="_compute_alloggiati_document_type",
+        store=True,
+        help="Document type code for Alloggiati Web service"
     )
 
     residence_city_id = fields.Many2one("res.city", string="City of Residence")
@@ -70,7 +61,26 @@ class PmsCheckinPartner(models.Model):
     self_checkin_completed = fields.Boolean(
         string="Self Check-in Completed",
         default=False
-    )
+    )    
+    
+    @api.depends('document_type', 'document_type.alloggiati_code')
+    def _compute_alloggiati_document_type(self):
+        """Compute Alloggiati document type code"""
+        for record in self:
+            if record.document_type and record.document_type.alloggiati_code:
+                record.alloggiati_document_type = record.document_type.alloggiati_code
+            else:
+                record.alloggiati_document_type = ""
+
+    def get_alloggiati_document_data(self):
+        """Get document data formatted for Alloggiati submission"""
+        self.ensure_one()
+        return {
+            'document_type': self.alloggiati_document_type or "",
+            'document_number': self.document_number or "",
+            'document_expedition_date': self.document_expedition_date or "",
+            'document_country': self.document_country_id.code if self.document_country_id else "",
+        }
 
     @api.depends('guest_group_id', 'is_main_guest')
     def _compute_tipo_alloggiato(self):

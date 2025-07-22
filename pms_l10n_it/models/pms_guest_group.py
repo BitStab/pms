@@ -114,8 +114,8 @@ class PmsGuestGroup(models.Model):
         
         # Nach dem write() hat self.group_type den neuen Wert
         field = self._fields['group_type']
-        display_name = dict(field.selection)[self.group_type]
-        
+        display_name = field.convert_to_export(self.group_type, self)
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

@@ -184,7 +184,7 @@ class PmsRemoteCheckinToken(models.Model):
         # Send email
         template = self.env.ref('pms_l10n_it.email_template_remote_checkin', False)
         if template:
-            template.with_context(lang=self.language).send_mail(self.id, force_send=True)
+            template.with_context(lang=self.language).send_mail([self.id], force_send=True)
         
         self.write({
             'state': 'sent',

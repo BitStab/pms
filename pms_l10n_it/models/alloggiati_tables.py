@@ -102,7 +102,7 @@ class AlloggiatiTableManager(models.Model):
                 raise UserError(_("Authentication failed: %s") % token_info.get('error'))
             
             token = token_info['token']
-            username = self.property_id.alloggiati_web_username
+            username = self.property_id.alloggiati_web_user
             
             # Sync each table type
             table_types = ['Luoghi', 'Tipi_Documento', 'Tipi_Alloggiato', 'ListaAppartamenti']

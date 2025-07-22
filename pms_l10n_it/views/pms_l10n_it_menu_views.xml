@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2025 IT-Stecher -->
+<!-- License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <data>
+
+        <!-- Main Menu: Italian Guest Registration -->
+        <menuitem id="menu_italian_guest_registration_root"
+                  name="Italian Registration"
+                  parent="pms.pms_management_menu"
+                  sequence="50"/>
+
+        <!-- Submenu: Guest Operations -->
+        <menuitem id="menu_italian_guest_operations"
+                  name="Guest Operations"
+                  parent="menu_italian_guest_registration_root"
+                  sequence="10"/>
+
+        <!-- Guest Registration Menu -->
+        <menuitem id="menu_pms_guest_registration"
+                  name="Guest Registrations"
+                  parent="menu_italian_guest_operations"
+                  action="pms_guest_registration_action_window"
+                  sequence="10"/>
+
+        <!-- Guest Registration Wizard Menu -->
+        <menuitem id="menu_pms_guest_registration_wizard"
+                  name="Register Guests"
+                  parent="menu_italian_guest_operations"
+                  action="action_pms_guest_registration_wizard"
+                  sequence="20"/>
+
+        <!-- Registration Dashboard Menu -->
+        <menuitem id="menu_pms_guest_registration_dashboard"
+                  name="Registration Dashboard"
+                  parent="menu_italian_guest_operations"
+                  action="pms_guest_registration_dashboard_action_window"
+                  sequence="30"/>
+
+        <!-- Submenu: Configuration -->
+        <menuitem id="menu_alloggiati_config"
+                  name="Configuration"
+                  parent="menu_italian_guest_registration_root"
+                  sequence="20"/>
+
+        <!-- Alloggiati Tables Menu -->
+        <menuitem id="menu_alloggiati_tables"
+                  name="Reference Tables"
+                  parent="menu_alloggiati_config"
+                  action="alloggiati_table_action_window"
+                  sequence="10"/>
+
+        <!-- CSV Import Wizard Menu -->
+        <menuitem id="menu_alloggiati_csv_import"
+                  name="Import CSV Tables"
+                  parent="menu_alloggiati_config"
+                  action="action_alloggiati_csv_import_wizard"
+                  sequence="20"/>
+
+        <!-- Document Type Import Menu - HINZUGEFÜGT -->
+        <menuitem id="menu_pms_document_type_import"
+                  name="Import Document Types"
+                  parent="menu_alloggiati_config"
+                  action="action_pms_document_type_import_wizard"
+                  sequence="25"/>
+
+        <!-- Document Types Menu -->
+        <menuitem id="menu_pms_document_types"
+                  name="Document Types"
+                  parent="menu_alloggiati_config"
+                  action="pms_document_type_action_window"
+                  sequence="30"/>
+
+        <!-- Property Configuration Menu -->
+        <menuitem id="menu_pms_property_italian_config"
+                  name="Property Settings"
+                  parent="menu_alloggiati_config"
+                  action="pms.open_pms_property_view_form"
+                  sequence="40"/>
+
+        <!-- Submenu: Reports & Monitoring -->
+        <menuitem id="menu_italian_reports"
+                  name="Reports & Monitoring"
+                  parent="menu_italian_guest_registration_root"
+                  sequence="30"/>
+
+        <!-- Registration Receipts Menu -->
+        <menuitem id="menu_pms_guest_registration_receipts"
+                  name="Registration Receipts"
+                  parent="menu_italian_reports"
+                  action="pms_guest_registration_receipt_action_window"
+                  sequence="10"/>
+
+        <!-- Registration Alerts Menu -->
+        <menuitem id="menu_pms_guest_registration_alerts"
+                  name="Registration Alerts"
+                  parent="menu_italian_reports"
+                  action="pms_guest_registration_alert_action_window"
+                  sequence="20"/>
+
+        <!-- Remote Check-in Menu -->
+        <menuitem id="menu_remote_checkin"
+                  name="Remote Check-in"
+                  parent="menu_italian_guest_registration_root"
+                  sequence="40"/>
+
+        <!-- Remote Check-in Tokens Menu -->
+        <menuitem id="menu_pms_remote_checkin_tokens"
+                  name="Check-in Tokens"
+                  parent="menu_remote_checkin"
+                  action="pms_remote_checkin_token_action_window"
+                  sequence="10"/>
+
+        <!-- Remote Check-in Data Menu -->
+        <menuitem id="menu_pms_remote_checkin_data"
+                  name="Check-in Data"
+                  parent="menu_remote_checkin"
+                  action="pms_remote_checkin_data_action_window"
+                  sequence="20"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- pms_l10n_it/views/res_partner_id_category_alloggiati_views.xml -->
+<odoo>
+    <data>
+
+        <!-- Erweitere bestehende PMS Tree View für Alloggiati -->
+        <record id="res_partner_id_category_tree_alloggiati" model="ir.ui.view">
+            <field name="name">res.partner.id_category.tree.alloggiati</field>
+            <field name="model">res.partner.id_category</field>
+            <field name="inherit_id" ref="pms.view_partner_id_category_tree_inherited"/>
+            <field name="arch" type="xml">
+                <!-- Erweitere bestehende PMS Tree View -->
+                <field name="country_ids" position="after">
+                    <field name="alloggiati_code" string="Alloggiati Code"/>
+                    <field name="is_alloggiati_type" widget="boolean_toggle"/>
+                    <field name="alloggiati_table_id" optional="hide"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- Erweitere bestehende PMS Form View für Alloggiati -->
+        <record id="res_partner_id_category_form_alloggiati" model="ir.ui.view">
+            <field name="name">res.partner.id_category.form.alloggiati</field>
+            <field name="model">res.partner.id_category</field>
+            <field name="inherit_id" ref="pms.view_partner_id_category_form_inherited"/>
+            <field name="arch" type="xml">
+                <!-- Erweitere bestehende PMS Form View -->
+                <field name="country_ids" position="after">
+                    <group string="Italian Alloggiati Integration" 
+                           invisible="not alloggiati_code">
+                        <field name="alloggiati_code"/>
+                        <field name="is_alloggiati_type" readonly="1"/>
+                        <field name="alloggiati_table_id" readonly="1"/>
+                    </group>
+                </field>
+            </field>
+        </record>
+
+        <!-- Separate Action nur für Alloggiati-Dokumenttypen -->
+        <record id="action_alloggiati_document_types" model="ir.actions.act_window">
+            <field name="name">Italian Document Types (Alloggiati)</field>
+            <field name="res_model">res.partner.id_category</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('is_alloggiati_type', '=', True)]</field>
+            <field name="context">{
+                'default_alloggiati_code': '',
+                'search_default_active': 1
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Synchronize Italian document types from Alloggiati Web!
+                </p>
+                <p>
+                    These document types are used for Italian guest registration 
+                    and are synchronized with the Alloggiati Web service.
+                </p>
+                <p>
+                    <button type="object" name="sync_from_alloggiati_tables" 
+                            class="btn btn-primary">
+                        Sync from Alloggiati Tables
+                    </button>
+                </p>
+            </field>
+        </record>
+
+        <!-- Action für alle PMS Partner ID Categories (erweiterte Ansicht) -->
+        <record id="action_all_partner_id_categories" model="ir.actions.act_window">
+            <field name="name">All Partner ID Categories</field>
+            <field name="res_model">res.partner.id_category</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first partner identification category!
+                </p>
+                <p>
+                    Partner ID categories classify document types for guest registration.
+                    This includes both standard categories and Italian Alloggiati types.
+                </p>
+            </field>
+        </record>
+
+        <!-- Server Action für Alloggiati Sync -->
+        <record id="action_sync_alloggiati_document_types" model="ir.actions.server">
+            <field name="name">Sync from Alloggiati Tables</field>
+            <field name="model_id" ref="pms.model_res_partner_id_category"/>
+            <field name="state">code</field>
+            <field name="code">
+synced_count = model.sync_from_alloggiati_tables()
+env.user.notify_success(f"Successfully synced {synced_count} document types from Alloggiati")
+            </field>
+        </record>
+
+        <!-- Server Action für Standard-Typen erstellen -->
+        <record id="action_create_italian_defaults" model="ir.actions.server">
+            <field name="name">Create Italian Default Types</field>
+            <field name="model_id" ref="pms.model_res_partner_id_category"/>
+            <field name="state">code</field>
+            <field name="code">
+created_count = model.create_italian_defaults()
+env.user.notify_success(f"Created {created_count} default Italian document types")
+            </field>
+        </record>
+
+        <!-- Menu Items in italienischer Konfiguration -->
+        <menuitem id="menu_alloggiati_document_types"
+                  name="Document Types (Alloggiati)"
+                  parent="menu_alloggiati_config"
+                  action="action_alloggiati_document_types"
+                  sequence="30"/>
+
+        <menuitem id="menu_all_id_categories"
+                  name="All ID Categories"
+                  parent="menu_alloggiati_config"  
+                  action="action_all_partner_id_categories"
+                  sequence="35"/>
+
+    </data>
+</odoo>

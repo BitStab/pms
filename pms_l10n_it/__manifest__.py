@@ -1,11 +1,29 @@
-# Copyright 2025 IT-Stecher
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
-
+# pms_l10n_it/__manifest__.py (Finale Version)
 {
-    "name": "PMS Italian Guest Registration (Alloggiati Web)",
-    "summary": """
-        Complete Italian guest registration integration for PMS with Alloggiati Web service,
-        including remote check-in, automatic receipt download, and comprehensive monitoring
+    'name': 'PMS Italy Localization',
+    'version': '16.0.1.0.0',
+    'category': 'Hospitality',
+    'summary': 'PMS Italy Localization with Alloggiati integration',
+    'description': """
+PMS Italian Localization
+========================
+
+This module extends the PMS (Property Management System) module with 
+Italian localization features, including integration with the Italian 
+Alloggiati Web service for guest registration.
+
+Key Features:
+* Italian guest registration compliance
+* Alloggiati Web service integration  
+* Enhanced document type management (extends PMS res.partner.id_category)
+* Remote check-in functionality
+* Automatic receipt download
+* Guest registration dashboard
+
+Technical Notes:
+* Extends the existing PMS partner identification system
+* No model duplication - uses standard res.partner.id_category
+* Fully compatible with OCA PMS architecture
     """,
     "version": "16.0.2.0.0",
     "license": "AGPL-3",
@@ -41,9 +59,10 @@
         "views/pms_guest_group_views.xml",
         "views/pms_checkin_partner_groups_views.xml",
         
-        # Wizards
-        "wizard/pms_guest_registration_wizard_views.xml",
-        "wizard/alloggiati_csv_import_wizard_views.xml",
+        # Wizards - KORRIGIERTE REIHENFOLGE
+        "wizards/pms_guest_registration_wizard_views.xml",
+        "wizards/alloggiati_csv_import_wizard_views.xml",
+        "wizards/pms_document_type_import_wizard_views.xml",  # HINZUGEFÜGT
     ],
     "demo": [
         "demo/demo_data.xml",
