@@ -127,6 +127,12 @@ class PmsProperty(models.Model):
         store=True
     )
 
+    it_max_registration_retries = fields.Integer(
+        string="Max Registration Retries",
+        default=3,
+        help="Maximum number of retries for guest registration"
+    )
+
     # Self-Check-In Configuration
     remote_checkin_enabled = fields.Boolean(
         string="Remote Check-in Enabled",
@@ -580,3 +586,5 @@ class PmsProperty(models.Model):
                 import logging
                 _logger = logging.getLogger(__name__)
                 _logger.error("Error generating weekly summary for property %s: %s", property_rec.name, str(e))
+
+    
