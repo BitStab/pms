@@ -50,16 +50,7 @@
             <field name="model_id" ref="model_pms_property"/>
             <field name="state">code</field>
             <field name="code">
-# Find properties with remote check-in enabled
-properties = model.search([('remote_checkin_enabled', '=', True)])
-
-for property_rec in properties:
-    try:
-        property_rec.action_send_remote_checkin_links()
-    except Exception as e:
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.error("Error generating remote check-in links for property %s: %s", property_rec.name, str(e))
+            model._cron_generate_remote_checkin_links()
             </field>
             <field name="interval_number">4</field>
             <field name="interval_type">hours</field>
@@ -103,75 +94,7 @@ for property_rec in properties:
             <field name="model_id" ref="model_pms_property"/>
             <field name="state">code</field>
             <field name="code">
-# Send weekly summary for properties with notifications enabled
-from datetime import datetime, timedelta
-
-properties = model.search([
-    ('it_guest_registration_enabled', '=', True),
-    ('send_success_notifications', '=', True),
-    ('registration_notification_emails', '!=', False)
-])
-
-for property_rec in properties:
-    try:
-        # Calculate weekly stats
-        week_start = datetime.now() - timedelta(days=7)
-        registrations = env['pms.guest.registration'].search([
-            ('property_id', '=', property_rec.id),
-            ('create_date', '>=', week_start),
-            ('state', '=', 'sent')
-        ])
-        
-        failed_registrations = env['pms.guest.registration'].search_count([
-            ('property_id', '=', property_rec.id),
-            ('create_date', '>=', week_start),
-            ('state', '=', 'error')
-        ])
-        
-        total_guests = sum(registrations.mapped('guest_count'))
-        success_rate = 100.0 if not failed_registrations else (len(registrations) / (len(registrations) + failed_registrations)) * 100
-        
-        # Get top nationalities
-        guests = env['pms.checkin.partner'].search([
-            ('it_registered', '=', True),
-            ('it_registration_date', '>=', week_start),
-            ('pms_property_id', '=', property_rec.id)
-        ])
-        
-        nationality_stats = {}
-        for guest in guests:
-            if guest.nationality_id:
-                country = guest.nationality_id.name
-                nationality_stats[country] = nationality_stats.get(country, 0) + 1
-        
-        top_nationalities = [
-            {
-                'country': country,
-                'count': count,
-                'percentage': (count / total_guests * 100) if total_guests > 0 else 0
-            }
-            for country, count in sorted(nationality_stats.items(), key=lambda x: x[1], reverse=True)[:5]
-        ]
-        
-        # Prepare context for email
-        email_context = {
-            'total_registrations': len(registrations),
-            'total_guests': total_guests,
-            'failed_registrations': failed_registrations,
-            'success_rate': success_rate,
-            'top_nationalities': top_nationalities,
-            'avg_response_time': '&lt; 2 seconds',  # Could be calculated from actual data
-        }
-        
-        # Send email
-        template = env.ref('pms_l10n_it.email_template_weekly_summary', raise_if_not_found=False)
-        if template:
-            template.with_context(**email_context).send_mail(property_rec.id)
-            
-    except Exception as e:
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.error("Error generating weekly summary for property %s: %s", property_rec.name, str(e))
+model.cron_send_weekly_registration_summary()
             </field>
             <field name="interval_number">1</field>
             <field name="interval_type">weeks</field>
@@ -188,25 +111,7 @@ for property_rec in properties:
             <field name="state">code</field>
             <field name="code">
 # Sync reference tables monthly for all properties
-properties = env['pms.property'].search([('it_guest_registration_enabled', '=', True)])
-
-for property_rec in properties:
-    try:
-        # Find or create table manager
-        table_manager = model.search([('property_id', '=', property_rec.id)], limit=1)
-        if not table_manager:
-            table_manager = model.create({'property_id': property_rec.id})
-        
-        # Only sync if last sync was more than 30 days ago or never synced
-        from datetime import timedelta
-        if (not table_manager.last_sync_date or 
-            table_manager.last_sync_date &lt; (fields.Datetime.now() - timedelta(days=30))):
-            table_manager.action_sync_all_tables()
-            
-    except Exception as e:
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.error("Error syncing tables for property %s: %s", property_rec.name, str(e))
+model.cron_sync_reference_tables()
             </field>
             <field name="interval_number">1</field>
             <field name="interval_type">months</field>
@@ -223,37 +128,7 @@ for property_rec in properties:
             <field name="state">code</field>
             <field name="code">
 # Retry failed registrations that are less than 24 hours old
-from datetime import timedelta
-
-failed_registrations = model.search([
-    ('state', '=', 'error'),
-    ('create_date', '>=', fields.Datetime.now() - timedelta(hours=24)),
-    ('create_date', '&lt;=', fields.Datetime.now() - timedelta(hours=1)),  # Wait at least 1 hour
-])
-
-for registration in failed_registrations:
-    try:
-        # Check if property allows automatic retries
-        if hasattr(registration.property_id, 'max_registration_retries'):
-            # Count previous retry attempts (could be tracked in a separate field)
-            retry_count = registration.message_ids.filtered(lambda m: 'retry' in m.body.lower())
-            if len(retry_count) >= registration.property_id.max_registration_retries:
-                continue  # Skip if max retries reached
-        
-        # Reset state and try again
-        registration.write({
-            'state': 'draft',
-            'error_message': False,
-            'transmission_date': False
-        })
-        
-        # Attempt to send again
-        registration.action_send_registration()
-        
-    except Exception as e:
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.error("Error retrying registration %s: %s", registration.id, str(e))
+model.cron_retry_failed_registrations()
             </field>
             <field name="interval_number">4</field>
             <field name="interval_type">hours</field>

@@ -295,3 +295,26 @@ class AlloggiatiTableManager(models.Model):
         """Update document type mappings"""
         # This could be used to populate selection fields or create lookup tables
         pass
+
+    # Sync reference tables monthly for all properties
+    def cron_sync_reference_tables(self):
+        properties = self.env['pms.property'].search([('it_guest_registration_enabled', '=', True)])
+        model = self.env['alloggiati.table.manager']
+
+        for property_rec in properties:
+            try:
+                # Find or create table manager
+                table_manager = model.search([('property_id', '=', property_rec.id)], limit=1)
+                if not table_manager:
+                    table_manager = model.create({'property_id': property_rec.id})
+                
+                # Only sync if last sync was more than 30 days ago or never synced
+                from datetime import timedelta
+                if (not table_manager.last_sync_date or 
+                    table_manager.last_sync_date < (fields.Datetime.now() - timedelta(days=30))):
+                    table_manager.action_sync_all_tables()
+                    
+            except Exception as e:
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.error("Error syncing tables for property %s: %s", property_rec.name, str(e))

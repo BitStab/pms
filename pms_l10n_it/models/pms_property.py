@@ -134,6 +134,17 @@ class PmsProperty(models.Model):
         help="Enable remote check-in for guests"
     )
 
+    send_success_notifications = fields.Boolean(
+        string="Send Success Notifications",
+        default=False,
+        help="Send weekly registration summary notifications"
+    )
+
+    registration_notification_emails = fields.Boolean(
+        string="Registration Notification Emails",
+        help="Enable registration notification emails"
+    )
+
     remote_checkin_reminder_hours = fields.Integer(
         string="Remote Check-in Reminder Hours",
         default=72,
@@ -391,3 +402,181 @@ class PmsProperty(models.Model):
         )
         
         return guests
+
+    @api.model
+    def _cron_auto_guest_registration(self):
+        """Cron job for automatic guest registration"""
+        properties = self.search([
+            ('it_guest_registration_enabled', '=', True),
+            ('auto_register_checkin', '=', True),
+        ])
+        
+        for prop in properties:
+            try:
+                # Get current time
+                now = fields.Datetime.now()
+                current_time = now.strftime('%H:%M')
+                
+                # Check if it's time to register
+                if prop.auto_register_time == current_time:
+                    guests = prop.get_guests_for_auto_registration()
+                    
+                    if guests:
+                        # Create registration wizard
+                        wizard = self.env['pms.guest.registration.wizard'].create({
+                            'property_id': prop.id,
+                            'registration_date': fields.Date.today(),
+                            'checkin_partner_ids': [(6, 0, guests.ids)],
+                            'auto_apply_exemptions': True,
+                        })
+                        
+                        # Execute registration
+                        wizard.action_register_guests()
+                        
+                        _logger.info(
+                            "Auto-registration completed for property %s: %d guests",
+                            prop.name,
+                            len(guests)
+                        )
+            except Exception as e:
+                _logger.error(
+                    "Auto-registration failed for property %s: %s",
+                    prop.name,
+                    str(e)
+                )
+    
+    @api.model
+    def _cron_cleanup_old_data(self):
+        """Cleanup old registration data"""
+        # Cleanup old tokens
+        old_date = fields.Datetime.now() - timedelta(days=365)
+        old_tokens = self.env['pms.remote.checkin.token'].search([
+            ('state', 'in', ['completed', 'expired', 'cancelled']),
+            ('create_date', '<', old_date),
+        ])
+        old_tokens.unlink()
+        
+        _logger.info("Cleaned up %d old check-in tokens", len(old_tokens))
+    
+    def action_send_remote_checkin_links(self):
+        """Send remote check-in links for upcoming reservations"""
+        self.ensure_one()
+        
+        if not self.remote_checkin_enabled:
+            return
+        
+        # Find eligible reservations
+        tomorrow = fields.Date.today() + timedelta(days=1)
+        eligible_date = tomorrow + timedelta(hours=self.remote_checkin_reminder_hours)
+        
+        reservations = self.env['pms.reservation'].search([
+            ('pms_property_id', '=', self.id),
+            ('state', 'in', ['confirm', 'onboard']),
+            ('checkin', '>=', tomorrow),
+            ('checkin', '<=', eligible_date),
+        ])
+        
+        for reservation in reservations:
+            # Check if token already exists
+            existing_token = self.env['pms.remote.checkin.token'].search([
+                ('reservation_id', '=', reservation.id),
+                ('state', '!=', 'cancelled'),
+            ], limit=1)
+            
+            if not existing_token and reservation.partner_id.email:
+                # Create and send token
+                token = self.env['pms.remote.checkin.token'].create({
+                    'reservation_id': reservation.id,
+                    'guest_email': reservation.partner_id.email,
+                    'guest_name': reservation.partner_id.name,
+                })
+                token.action_send_token()
+
+    # Find properties with remote check-in enabled
+    def cron_generate_remote_checkin_links(self):
+        """Cron job to generate remote check-in links for properties"""
+        model = self.env['pms.property']
+        
+        # Search for properties with remote check-in enabled
+        properties = model.search([('remote_checkin_enabled', '=', True)])
+
+        for property_rec in properties:
+            try:
+                property_rec.action_send_remote_checkin_links()
+            except Exception as e:
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.error("Error generating remote check-in links for property %s: %s", property_rec.name, str(e))
+    
+    # Send weekly summary for properties with notifications enabled
+    def cron_send_weekly_registration_summary(self):
+        """Cron job to send weekly registration summary for properties"""
+        model = self.env['pms.property']
+        
+
+        properties = model.search([
+            ('it_guest_registration_enabled', '=', True),
+            ('send_success_notifications', '=', True),
+            ('registration_notification_emails', '!=', False)
+        ])
+
+        for property_rec in properties:
+            try:
+                # Calculate weekly stats
+                week_start = datetime.now() - timedelta(days=7)
+                registrations = self.env['pms.guest.registration'].search([
+                    ('property_id', '=', property_rec.id),
+                    ('create_date', '>=', week_start),
+                    ('state', '=', 'sent')
+                ])
+                
+                failed_registrations = self.env['pms.guest.registration'].search_count([
+                    ('property_id', '=', property_rec.id),
+                    ('create_date', '>=', week_start),
+                    ('state', '=', 'error')
+                ])
+                
+                total_guests = sum(registrations.mapped('guest_count'))
+                success_rate = 100.0 if not failed_registrations else (len(registrations) / (len(registrations) + failed_registrations)) * 100
+                
+                # Get top nationalities
+                guests = self.env['pms.checkin.partner'].search([
+                    ('it_registered', '=', True),
+                    ('it_registration_date', '>=', week_start),
+                    ('pms_property_id', '=', property_rec.id)
+                ])
+                
+                nationality_stats = {}
+                for guest in guests:
+                    if guest.nationality_id:
+                        country = guest.nationality_id.name
+                        nationality_stats[country] = nationality_stats.get(country, 0) + 1
+                
+                top_nationalities = [
+                    {
+                        'country': country,
+                        'count': count,
+                        'percentage': (count / total_guests * 100) if total_guests > 0 else 0
+                    }
+                    for country, count in sorted(nationality_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+                ]
+                
+                # Prepare context for email
+                email_context = {
+                    'total_registrations': len(registrations),
+                    'total_guests': total_guests,
+                    'failed_registrations': failed_registrations,
+                    'success_rate': success_rate,
+                    'top_nationalities': top_nationalities,
+                    'avg_response_time': '&lt; 2 seconds',  # Could be calculated from actual data
+                }
+                
+                # Send email
+                template = self.env.ref('pms_l10n_it.email_template_weekly_summary', raise_if_not_found=False)
+                if template:
+                    template.with_context(**email_context).send_mail(property_rec.id)
+                    
+            except Exception as e:
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.error("Error generating weekly summary for property %s: %s", property_rec.name, str(e))

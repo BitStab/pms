@@ -4,7 +4,7 @@
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import requests
 import xml.etree.ElementTree as ET
 
@@ -15,7 +15,8 @@ class PmsGuestRegistration(models.Model):
     _name = "pms.guest.registration"
     _description = "Italian Guest Registration"
     _order = "registration_date desc"
-    _rec_name = "display_name"
+    _rec_name = "display_name"    
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     display_name = fields.Char(
         string="Name",
@@ -717,3 +718,37 @@ class PmsGuestRegistration(models.Model):
         self.transmission_date = False
         self.response_message = False
         self.error_message = False
+
+    # Retry failed registrations that are less than 24 hours old
+    def cron_retry_failed_registrations(self):
+        """Cron job to retry failed registrations"""
+        model = self.env['pms.guest.registration']
+        
+        # Search for registrations in error state created in the last 24 hours
+        failed_registrations = model.search([
+            ('state', '=', 'error'),
+            ('create_date', '>=', fields.Datetime.now() - timedelta(hours=24)),
+            ('create_date', '<=', fields.Datetime.now() - timedelta(hours=1)),  # Wait at least 1 hour
+        ])
+        
+        for registration in failed_registrations:
+            try:
+                # Check if property allows automatic retries
+                if hasattr(registration.property_id, 'max_registration_retries'):
+                    # Count previous retry attempts (could be tracked in a separate field)
+                    retry_count = registration.message_ids.filtered(lambda m: 'retry' in m.body.lower())
+                    if len(retry_count) >= registration.property_id.it_max_registration_retries:
+                        continue  # Skip if max retries reached
+                
+                # Reset state and try again
+                registration.write({
+                    'state': 'draft',
+                    'error_message': False,
+                    'transmission_date': False
+                })
+                
+                # Attempt to send again
+                registration.action_send_registration()
+                
+            except Exception as e:
+                _logger.error("Error retrying registration %s: %s", registration.id, str(e))
