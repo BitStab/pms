@@ -1,40 +1,24 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-# Existing access rights - Core Models
 access_alloggiati_table_user,alloggiati.table.user,model_alloggiati_table,pms.group_pms_user,1,0,0,0
 access_alloggiati_table_manager,alloggiati.table.manager,model_alloggiati_table,pms.group_pms_manager,1,1,1,1
 access_alloggiati_table_manager_model_user,alloggiati.table.manager.user,model_alloggiati_table_manager,pms.group_pms_user,1,0,0,0
 access_alloggiati_table_manager_model_manager,alloggiati.table.manager.manager,model_alloggiati_table_manager,pms.group_pms_manager,1,1,1,1
-
-# Guest Registration Models
 access_pms_guest_registration_user,pms.guest.registration.user,model_pms_guest_registration,pms.group_pms_user,1,1,1,0
 access_pms_guest_registration_manager,pms.guest.registration.manager,model_pms_guest_registration,pms.group_pms_manager,1,1,1,1
-
-# Guest Registration Receipt Models  
 access_pms_guest_registration_receipt_user,pms.guest.registration.receipt.user,model_pms_guest_registration_receipt,pms.group_pms_user,1,0,0,0
 access_pms_guest_registration_receipt_manager,pms.guest.registration.receipt.manager,model_pms_guest_registration_receipt,pms.group_pms_manager,1,1,1,1
-
-# Dashboard Models
-access_pms_guest_registration_dashboard_user,pms.guest.registration.dashboard.user,model_pms_guest_registration_dashboard,pms.group_pms_user,1,0,0,0
-access_pms_guest_registration_dashboard_manager,pms.guest.registration.dashboard.manager,model_pms_guest_registration_dashboard,pms.group_pms_manager,1,0,0,0
-
-# Alert Models
 access_pms_guest_registration_alert_user,pms.guest.registration.alert.user,model_pms_guest_registration_alert,pms.group_pms_user,1,1,0,0
 access_pms_guest_registration_alert_manager,pms.guest.registration.alert.manager,model_pms_guest_registration_alert,pms.group_pms_manager,1,1,1,1
-
-# Remote Check-in Models
 access_pms_remote_checkin_token_user,pms.remote.checkin.token.user,model_pms_remote_checkin_token,pms.group_pms_user,1,1,1,0
 access_pms_remote_checkin_token_manager,pms.remote.checkin.token.manager,model_pms_remote_checkin_token,pms.group_pms_manager,1,1,1,1
 access_pms_remote_checkin_data_user,pms.remote.checkin.data.user,model_pms_remote_checkin_data,pms.group_pms_user,1,1,1,0
 access_pms_remote_checkin_data_manager,pms.remote.checkin.data.manager,model_pms_remote_checkin_data,pms.group_pms_manager,1,1,1,1
-
-# Document Type Model
-access_pms_document_type_user,pms.document.type.user,model_pms_document_type,pms.group_pms_user,1,0,0,0
-access_pms_document_type_manager,pms.document.type.manager,model_pms_document_type,pms.group_pms_manager,1,1,1,1
-
-# Wizard Models - KORRIGIERT
 access_pms_guest_registration_wizard_user,pms.guest.registration.wizard.user,model_pms_guest_registration_wizard,pms.group_pms_user,1,1,1,1
 access_pms_guest_registration_wizard_manager,pms.guest.registration.wizard.manager,model_pms_guest_registration_wizard,pms.group_pms_manager,1,1,1,1
 access_alloggiati_csv_import_wizard_user,alloggiati.csv.import.wizard.user,model_alloggiati_csv_import_wizard,pms.group_pms_user,1,1,1,1
 access_alloggiati_csv_import_wizard_manager,alloggiati.csv.import.wizard.manager,model_alloggiati_csv_import_wizard,pms.group_pms_manager,1,1,1,1
 access_pms_document_type_import_wizard_user,pms.document.type.import.wizard.user,model_pms_document_type_import_wizard,pms.group_pms_user,1,1,1,1
 access_pms_document_type_import_wizard_manager,pms.document.type.import.wizard.manager,model_pms_document_type_import_wizard,pms.group_pms_manager,1,1,1,1
+access_pms_guest_invitation_user,pms.guest.invitation.user,model_pms_guest_invitation,pms.group_pms_user,1,1,1,0
+access_pms_guest_invitation_manager,pms.guest.invitation.manager,model_pms_guest_invitation,pms.group_pms_manager,1,1,1,1
+access_pms_guest_invitation_public,pms.guest.invitation.public,model_pms_guest_invitation,base.group_public,1,0,0,0

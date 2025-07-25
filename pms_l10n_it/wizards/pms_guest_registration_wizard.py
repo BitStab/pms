@@ -149,7 +149,7 @@ class PmsGuestRegistrationWizard(models.TransientModel):
                 ])
             elif wizard.filter_by_arrival == 'week':
                 domain.extend([
-                    ('arrival', '>=', fields.Date.today() - timedelta(days=7)).isoformat()),
+                    ('arrival', '>=', (fields.Date.today() - timedelta(days=7)).isoformat()),
                     ('arrival', '<=', fields.Date.today().isoformat())
                 ])
             elif wizard.filter_by_arrival == 'custom':

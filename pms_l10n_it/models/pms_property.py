@@ -3,7 +3,11 @@
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import logging
 
+_logger = logging.getLogger(__name__)
 
 class PmsProperty(models.Model):
     """Extension of PMS Property for Italian requirements"""
@@ -76,6 +80,35 @@ class PmsProperty(models.Model):
         default="23:00",
         help="Time of day to automatically register guests (HH:MM format)"
     )
+    
+    registration_delay = fields.Integer(
+        string="Registration Delay (hours)",
+        default=3,
+        help="Hours to wait after check-in before automatic registration"
+    )
+    
+    # Automatic guest selection settings
+    auto_select_guests = fields.Boolean(
+        string="Auto-select Guests",
+        default=True,
+        help="Automatically select guests for registration based on criteria"
+    )
+    
+    auto_select_criteria = fields.Selection([
+        ('all', 'All Guests'),
+        ('adults_only', 'Adults Only (18+)'),
+        ('non_exempt', 'Non-exempt Only'),
+        ('by_nationality', 'By Nationality'),
+    ], string="Auto-selection Criteria",
+        default='non_exempt',
+        help="Criteria for automatic guest selection"
+    )
+    
+    auto_select_nationalities = fields.Many2many(
+        'res.country',
+        string="Auto-select Nationalities",
+        help="Nationalities to include in automatic selection (leave empty for all)"
+    )
 
     # Guest Registration Statistics
     it_total_registrations = fields.Integer(
@@ -107,7 +140,7 @@ class PmsProperty(models.Model):
         help="Number of hours before check-in to send remote check-in reminder"
     )
 
-    @api.depends("id")
+    #@api.depends("id")
     def _compute_registration_stats(self):
         """Compute registration statistics"""
         for rec in self:
@@ -265,3 +298,96 @@ class PmsProperty(models.Model):
             "it_hotel_code": self.it_hotel_code,
             "it_structure_type": self.it_structure_type,
         }
+    
+    def get_guests_for_auto_registration(self):
+        """
+        Get guests that should be automatically registered based on property settings.
+        
+        This method is called from the guest registration wizard to pre-select
+        guests based on the property's auto-selection configuration.
+        
+        Returns:
+            recordset: pms.checkin.partner records to be registered
+        """
+        self.ensure_one()
+        
+        # Base domain for all queries
+        domain = [
+            ('state', '=', 'onboard'),
+            ('it_registered', '=', False),
+        ]
+        
+        # Add property filter
+        if 'pms_property_id' in self.env['pms.checkin.partner']._fields:
+            domain.append(('pms_property_id', '=', self.id))
+        elif 'property_id' in self.env['pms.checkin.partner']._fields:
+            domain.append(('property_id', '=', self.id))
+        else:
+            # Fallback: filter by reservations in this property
+            reservations = self.env['pms.reservation'].search([
+                ('pms_property_id', '=', self.id),
+                ('state', 'in', ['onboard', 'confirm']),
+            ])
+            domain.append(('reservation_id', 'in', reservations.ids))
+        
+        # Apply auto-selection criteria if enabled
+        if hasattr(self, 'auto_select_guests') and self.auto_select_guests:
+            
+            # Apply date filter based on registration delay
+            if hasattr(self, 'registration_delay') and self.registration_delay > 0:
+                # Only select guests who arrived at least X hours ago
+                from datetime import datetime, timedelta
+                cutoff_time = datetime.now() - timedelta(hours=self.registration_delay)
+                domain.append(('arrival', '<=', cutoff_time.strftime('%Y-%m-%d %H:%M:%S')))
+            else:
+                # Default: today's arrivals
+                domain.append(('arrival', '=', fields.Date.today()))
+            
+            # Apply selection criteria
+            if hasattr(self, 'auto_select_criteria'):
+                if self.auto_select_criteria == 'adults_only':
+                    # Exclude minors (under 18)
+                    domain.append('|')
+                    domain.append(('birthdate_date', '=', False))
+                    domain.append(('birthdate_date', '<=', fields.Date.today() - relativedelta(years=18)))
+                    
+                elif self.auto_select_criteria == 'non_exempt':
+                    # Exclude already exempted guests
+                    domain.extend([
+                        '|',
+                        ('it_exemption_reason', '=', False),
+                        ('it_exemption_reason', '=', ''),
+                    ])
+                    
+                elif self.auto_select_criteria == 'by_nationality':
+                    # Filter by specific nationalities (requires configuration)
+                    if hasattr(self, 'auto_select_nationalities') and self.auto_select_nationalities:
+                        nationality_ids = self.auto_select_nationalities.ids
+                        domain.append(('nationality_id', 'in', nationality_ids))
+                        
+                # For 'all' criteria or default, no additional filters needed
+                
+        else:
+            # If auto-selection is not enabled, return today's unregistered arrivals
+            domain.append(('arrival', '=', fields.Date.today()))
+        
+        # Additional filters to exclude certain guests
+        if hasattr(self, 'exempt_minors_under_age') and self.exempt_minors_under_age > 0:
+            # Optionally exclude minors under the exemption age
+            # This is applied separately in the wizard's auto_apply_exemptions method
+            pass
+        
+        # Search and return the filtered guests
+        guests = self.env['pms.checkin.partner'].search(domain)
+        
+        # Log the selection for debugging
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.info(
+            "Auto-registration selection for property %s: %d guests selected with criteria %s",
+            self.name,
+            len(guests),
+            getattr(self, 'auto_select_criteria', 'default')
+        )
+        
+        return guests
